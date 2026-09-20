@@ -1,0 +1,172 @@
+"""Strict XML validation and execution metrics for generated behavior trees."""
+from __future__ import annotations
+
+import argparse
+import json
+import time
+import xml.etree.ElementTree as ET
+from collections import Counter, defaultdict
+from pathlib import Path
+
+import torch
+
+from datagen.executor import BINDING_MAP, JOINT_PAIRS, execute, re_extract
+from datagen.strips.domains import build_domain
+from .common import load_jsonl, prompt_text
+
+BASE_DEFAULT = "/root/autodl-tmp/mBT/model/llama32-1b"
+CONTROL = {"root", "BehaviorTree", "SubTree", "Sequence", "Fallback", "Parallel",
+           "IsAtLocation", "IsItemAt", "IsCarrying", "SignalReady", "WaitReady"}
+ALLOWED = CONTROL | set(BINDING_MAP) | set(JOINT_PAIRS)
+
+
+def reconstruct(meta: dict) -> dict:
+    static = [("can_reach", r, l) for r, l in meta["can_reach"]]
+    edges = [("connected", a, b) for a, b in meta["connected"]]
+    return {
+        "domain": meta["domain"],
+        "domain_obj": build_domain(meta["domain"], robots=meta["robots"],
+                                    items=meta["items"], extra_static=static, edges=edges),
+        "init_dynamic": [tuple(x) for x in meta["init_dynamic"]],
+        "goal": [tuple(x) for x in meta["goal"]],
+        "faults": meta["faults"],
+        "skill_aliases": meta.get("skill_aliases", {}),
+    }
+
+
+def validate_xml(xml: str, meta: dict) -> tuple[str | None, str | None]:
+    try:
+        clean = re_extract(xml)
+        root = ET.fromstring(clean)
+    except Exception as exc:
+        return None, f"parse:{exc}"
+    if root.tag != "root" or root.get("main_tree_to_execute") is None:
+        return None, "schema:invalid_root"
+    trees = root.findall("BehaviorTree")
+    ids = [x.get("ID") for x in trees]
+    if len(trees) == 0 or any(not x for x in ids) or len(set(ids)) != len(ids):
+        return None, "schema:tree_ids"
+    if root.get("main_tree_to_execute") not in ids:
+        return None, "schema:missing_main_tree"
+    aliases = meta.get("skill_aliases", {})
+    for node in root.iter():
+        canonical = aliases.get(node.tag, node.tag)
+        if canonical not in ALLOWED:
+            return None, f"schema:unknown_tag:{node.tag}"
+        if canonical == "Parallel":
+            try:
+                s, f = int(node.get("success_threshold")), int(node.get("failure_threshold"))
+                if s < 1 or f < 1:
+                    return None, "schema:invalid_parallel_threshold"
+            except (TypeError, ValueError):
+                return None, "schema:invalid_parallel_threshold"
+        if canonical in BINDING_MAP:
+            expected = set(BINDING_MAP[canonical])
+            if set(node.attrib) != expected:
+                return None, f"schema:attrs:{node.tag}"
+        if canonical in {"SubTree"} and not node.get("ID"):
+            return None, "schema:subtree_id"
+    return clean, None
+
+
+def generate(rows: list[dict], adapter: str | None, base: str,
+             batch_size: int, max_new: int) -> tuple[list[str], list[float]]:
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                             bnb_4bit_compute_dtype=torch.bfloat16)
+    tok = AutoTokenizer.from_pretrained(base)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    tok.padding_side = "left"
+    model = AutoModelForCausalLM.from_pretrained(base, quantization_config=bnb,
+                                                 device_map="auto", torch_dtype=torch.bfloat16)
+    if adapter:
+        model = PeftModel.from_pretrained(model, adapter)
+    model.eval()
+    generations, times = [], []
+    for start in range(0, len(rows), batch_size):
+        chunk = rows[start:start + batch_size]
+        prompts = [prompt_text(r, tok) for r in chunk]
+        enc = tok(prompts, return_tensors="pt", padding=True, truncation=True,
+                  max_length=2560).to(model.device)
+        t0 = time.perf_counter()
+        with torch.no_grad():
+            out = model.generate(**enc, max_new_tokens=max_new, do_sample=False,
+                                 pad_token_id=tok.eos_token_id)
+        elapsed = (time.perf_counter() - t0) / len(chunk)
+        for row_out in out:
+            # left padding means the prompt width is the common input width.
+            generations.append(tok.decode(row_out[enc["input_ids"].shape[1]:],
+                                          skip_special_tokens=True))
+            times.append(elapsed)
+        print(f"generated {min(start + batch_size, len(rows))}/{len(rows)}", flush=True)
+    return generations, times
+
+
+def evaluate(rows: list[dict], generations: list[str], times: list[float]) -> dict:
+    if len(rows) != len(generations):
+        raise ValueError("generation count does not match dataset")
+    by_domain, by_tier, by_bucket = defaultdict(Counter), defaultdict(Counter), defaultdict(Counter)
+    reasons = Counter()
+    details = []
+    for row, generation, latency in zip(rows, generations, times):
+        meta = row["meta"]
+        clean, schema_error = validate_xml(generation, meta)
+        if schema_error:
+            result = {"success": False, "reason": schema_error}
+        else:
+            result = execute(reconstruct(meta), clean)
+            # The executor reports goal_reached only after a terminating tree;
+            # all action preconditions and fault transitions were checked during
+            # the trace. A malformed or non-terminating tree cannot pass here.
+        ok = bool(result.get("success"))
+        reason = "success" if ok else result.get("reason", "unknown")
+        if not ok:
+            reasons[reason] += 1
+        bucket = "new_primitive" if "+service" in meta.get("scenario", "") else "shared_primitive"
+        for group, key in ((by_domain, meta["domain"]), (by_tier, meta["tier"]), (by_bucket, bucket)):
+            group[key]["n"] += 1
+            group[key]["success"] += int(ok)
+        details.append({"success": ok, "reason": reason, "domain": meta["domain"],
+                        "tier": meta["tier"], "scenario": meta["scenario"],
+                        "latency_s": latency, "generated_chars": len(generation),
+                        "ticks": result.get("ticks", 0), "recoveries": result.get("recoveries", 0)})
+    n = len(rows)
+    return {
+        "n": n, "strict_success_rate": sum(x["success"] for x in details) / max(n, 1),
+        "mean_generation_latency_s": sum(times) / max(len(times), 1),
+        "per_domain": {k: dict(v) for k, v in by_domain.items()},
+        "per_tier": {k: dict(v) for k, v in by_tier.items()},
+        "per_bucket": {k: dict(v) for k, v in by_bucket.items()},
+        "fail_reasons": dict(reasons), "details": details,
+    }
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", required=True)
+    ap.add_argument("--adapter", default=None)
+    ap.add_argument("--base", default=BASE_DEFAULT)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--batch-size", type=int, default=8)
+    ap.add_argument("--max-new", type=int, default=1400)
+    ap.add_argument("--limit", type=int, default=0)
+    args = ap.parse_args()
+    rows = load_jsonl(args.data)
+    if args.limit:
+        rows = rows[:args.limit]
+    generations, times = generate(rows, args.adapter, args.base, args.batch_size, args.max_new)
+    result = evaluate(rows, generations, times)
+    result["adapter"] = args.adapter or "base"
+    result["data"] = str(args.data)
+    result["generations"] = generations
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({k: v for k, v in result.items() if k not in ("details", "generations")},
+                     ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,74 @@
+"""Regenerate an official DUCL order from cached Difficulty/Utility scores."""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+
+from .common import load_jsonl
+from .scoring import due_order
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--scores", required=True)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--scores-out", default=None)
+    ap.add_argument("--batch-size", type=int, default=4)
+    ap.add_argument("--alpha", type=float, default=0.5)
+    ap.add_argument("--seed", type=int, default=42)
+    args = ap.parse_args()
+
+    rows = load_jsonl(args.scores)
+    difficulty = np.asarray([row["bt_difficulty"] for row in rows], dtype=np.float64)
+    utility = np.asarray([row["bt_utility"] for row in rows], dtype=np.float64)
+    order, due = due_order(difficulty, utility, args.batch_size, args.alpha, args.seed)
+    if sorted(order) != list(range(len(rows))):
+        raise AssertionError("ordering is not a complete permutation")
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    scored_by_index = [None] * len(rows)
+    for position, index in enumerate(order):
+        row = dict(rows[index])
+        row["bt_due"] = float(due[index])
+        row["bt_order_position"] = position
+        scored_by_index[index] = row
+    with out.open("w", encoding="utf-8") as handle:
+        for index in order:
+            handle.write(json.dumps(scored_by_index[index], ensure_ascii=False) + "\n")
+    if args.scores_out:
+        scores_out = Path(args.scores_out)
+        scores_out.parent.mkdir(parents=True, exist_ok=True)
+        with scores_out.open("w", encoding="utf-8") as handle:
+            for row in scored_by_index:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    report_path = out.parent / "score_report.json"
+    if report_path.exists():
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    else:
+        report = {}
+    report.update({
+        "order_is_permutation": True,
+        "due_definition": "raw_difficulty_divided_by_raw_utility",
+        "sampler": "official_DUCL_window_quantile_10_to_100_percent",
+        "alpha": args.alpha,
+        "alpha_source": "official_DUCL_window_quantile_default",
+    })
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        "n": len(rows),
+        "order_is_permutation": True,
+        "due_definition": "raw_difficulty_divided_by_raw_utility",
+        "sampler": "official_DUCL_window_quantile_10_to_100_percent",
+        "alpha": args.alpha,
+        "alpha_source": "official_DUCL_window_quantile_default",
+        "seed": args.seed,
+        "output": str(out),
+    }, indent=2))
+
+
+if __name__ == "__main__":
+    main()
+

@@ -1,0 +1,56 @@
+{
+  "protocol": "fixed-prefix-0-1-5-shot-v1",
+  "test_count": 600,
+  "test_source_sha256": "7cf89e6f0b6c492f3ead0e43916844906f92555b4077c7c18fc48aa285cf62dd",
+  "train_source_sha256": "999fb44ffc259de517d246b4d7e1a5121052a5808758ea8210306d3dd0ea54bc",
+  "test_record_ids_sha256": "7eb1e32b04359199c594d432c8f6116aa68f8c46016cf9da50e37f8eefc64bb3",
+  "prompt_fields_visible_to_model": [
+    "instruction",
+    "input"
+  ],
+  "test_gold_outputs_in_bundle": false,
+  "selection": "fixed global demonstrations; minimum SHA-256 record ID per declared train stratum",
+  "one_shot_is_prefix_of_five_shot": true,
+  "demos": [
+    {
+      "demo_index": 0,
+      "record_id": "00816cea4c858ed85df4df5ad2c049cb321ab2c71b1bc5a0a799e6a0e5639042",
+      "domain": "hospital",
+      "tier": "T2",
+      "scenario": "relay"
+    },
+    {
+      "demo_index": 1,
+      "record_id": "00db3f559669c4b24f0ab870a415cb19dad3a9945107b47c9fbdbabda9abcbf3",
+      "domain": "warehouse",
+      "tier": "T1",
+      "scenario": "independent"
+    },
+    {
+      "demo_index": 2,
+      "record_id": "0058c2a4148bb7f1d2589af9342d07514b688ae5bd355de4862b7f1c109f3946",
+      "domain": "search_rescue",
+      "tier": "T2",
+      "scenario": "heavy"
+    },
+    {
+      "demo_index": 3,
+      "record_id": "086210ac7a6bc020d26f281f5daf9b0569e937e6f7a352a4da69d6c36883c2c5",
+      "domain": "office",
+      "tier": "T3",
+      "scenario": "heavy+extra"
+    },
+    {
+      "demo_index": 4,
+      "record_id": "017fec65ebdb1d6fdf3fff068a23655df1cf613c00d55b44cda8bfec7dc6f69e",
+      "domain": "warehouse",
+      "tier": "T3",
+      "scenario": "relay"
+    }
+  ],
+  "files": {
+    "test_prompts.jsonl": "460426518551424d64983979d98a046ac0a1edd760b0da3d531003bb34026d70",
+    "test_eval.jsonl": "9d3a8b0c1be352d3b9f1d0afeb5ada0b455fd93b8b4d0e1a5528338b25c97f5d",
+    "fixed_5shot_demos.jsonl": "eb0caf7e1d2207db30995cabf7322b1f119303aa39e0f2e99afaa0daf0306a92"
+  }
+}

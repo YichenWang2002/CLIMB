@@ -1,0 +1,27 @@
+# CLIMB — open-source package
+# Python 3.10
+
+# --- core (data + evaluation) ---
+numpy
+lxml
+
+# --- training ---
+torch==2.5.1
+transformers==4.57.3
+peft==0.19.1
+trl==1.6.0
+accelerate
+datasets
+sentence-transformers
+
+# --- SPCL difficulty scoring ---
+geomloss
+pykeops
+
+# --- hosted-LLM baselines (optional) ---
+openai
+
+# --- MRBTP baseline (optional) ---
+# Clone https://github.com/DIDS-EI/MRBTP and `pip install -e .` it, then point
+# MRBTP_ROOT at the checkout (see baselines/run_mrbtp.py). Its own
+# requirements (gymnasium, minigrid, py_trees, antlr4, ...) come with it.
