@@ -23,11 +23,10 @@
 <body>
 
 <section class="hero">
-  <div class="hero-body"><div class="container is-max-desktop">
+  <div class="hero-body"><div class="container is-max-widescreen">
     <div class="columns is-centered has-text-centered">
-      <div class="column is-four-fifths">
-        <h1 class="title is-1 publication-title">CLIMB</h1>
-        <h2 class="subtitle is-4">Curriculum Learning for Multi-Agent Behavior Tree Generation<br>with Small Language Models</h2>
+      <div class="column is-10">
+        <h1 class="title is-1 publication-title" style="font-size:1.42rem;white-space:nowrap;overflow-x:auto">CLIMB: Curriculum Learning for Multi-Agent Behavior Tree Generation with Small Language Models</h1>
         <div class="is-size-5 publication-authors">
           <span class="author-block">Yichen Wang<sup>1</sup>,</span>
           <span class="author-block"><strong>Zhongxuan Cai<sup>1,*</sup></strong></span>,
@@ -36,8 +35,8 @@
           <span class="author-block">Tianjian Jiang<sup>1</sup>,</span>
           <span class="author-block">Yuanxi Peng<sup>1</sup></span>
         </div>
-        <div class="is-size-6 publication-authors" style="margin-top:.4em">
-          <span class="author-block"><sup>1</sup>College of Computer Science and Technology,<br>National University of Defense Technology, Changsha, China</span>
+        <div class="is-size-6 publication-authors" style="margin-top:.4em;white-space:nowrap">
+          <span class="author-block"><sup>1</sup>College of Computer Science and Technology, National University of Defense Technology, Changsha, China</span>
         </div>
         <div class="content has-text-centered" style="margin-top:1.2em">
           <span class="link-block"><a href="assets/CLIMB-paper.pdf" class="external-link button is-normal is-rounded is-dark">
@@ -98,7 +97,7 @@
   <div class="columns">
     <div class="column">
       <img src="static/images/replay_library_bookcase.gif" alt="Joint heavy transport replay, library domain" style="width:100%;border-radius:8px">
-      <p style="margin-top:.6em"><strong>Joint heavy transport (library).</strong> Two robots co-carry an oak
+      <p style="margin-top:.6em"><strong>Joint heavy transport.</strong> Two robots co-carry an oak
       bookcase to the reading hall; the restoration-lab passage may be blocked, forcing a
       <code>ClearPath</code> fallback recovery. <strong>CLIMB completes the mission</strong> while flat SFT and
       all four 5-shot general-purpose LLM baselines fail.</p>
@@ -107,17 +106,17 @@
     </div>
     <div class="column">
       <img src="static/images/replay_greenhouse_relay.gif" alt="Relay handover transport replay, greenhouse domain" style="width:100%;border-radius:8px">
-      <p style="margin-top:.6em"><strong>Relay handover transport (greenhouse).</strong> A fertilizer bag is
+      <p style="margin-top:.6em"><strong>Relay handover transport.</strong> A fertilizer bag is
       relayed across robots to the compost area over a blocked passage. <strong>CLIMB completes the mission</strong>
       while flat SFT, GPT-5.6-Luna, and DeepSeek-V4-Flash fail.</p>
       <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Executed behavior tree (CLIMB output)</summary>
-        <img src="static/images/bt_case43.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
+        <img src="static/images/bt_case39.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
     </div>
   </div>
 </div></section>
 
 <section class="section"><div class="container is-max-desktop">
-  <h2 class="title is-3">Benchmark</h2>
+  <h2 class="title is-3">Dataset</h2>
   <div class="content has-text-centered"><img src="static/images/dataset_pipeline.png" alt="benchmark pipeline" style="max-width:100%"></div>
   <div class="content">
     <p>We release a multi-agent mission-to-behavior-tree benchmark: <strong>480 held-out coordination
@@ -132,27 +131,32 @@
   <h2 class="title is-3">Results</h2>
   <div class="content">
     <table class="table is-bordered results" style="margin:auto">
-      <thead><tr><th>Method</th><th>Input</th><th>Relay</th><th>Joint</th><th>All 480</th></tr></thead>
+      <thead>
+        <tr><th rowspan="2">Model</th><th colspan="2">SR (%)</th><th colspan="2">Tokens</th></tr>
+        <tr><th>1-shot</th><th>5-shot</th><th>1-shot</th><th>5-shot</th></tr>
+      </thead>
       <tbody>
-        <tr><td>GPT-5.6-Luna (5-shot)</td><td>NL</td><td>—</td><td>—</td><td>50.42</td></tr>
-        <tr><td>Kimi-K2.5 (5-shot)</td><td>NL</td><td>—</td><td>—</td><td>54.38</td></tr>
-        <tr><td>DeepSeek-V4-Flash (5-shot)</td><td>NL</td><td>—</td><td>—</td><td>59.17</td></tr>
-        <tr><td>Qwen3.5-Plus (5-shot)</td><td>NL</td><td>—</td><td>—</td><td>60.63</td></tr>
-        <tr><td>BTGenBot-MA (Llama-3.2-1B)</td><td>NL</td><td>—</td><td>—</td><td>59.0</td></tr>
-        <tr><td>MRBTP-Adapted<sup>†</sup></td><td>oracle symbolic</td><td>65.8</td><td>18.3</td><td>42.1</td></tr>
-        <tr class="ours-row"><td>CLIMB (Llama-3.2-1B)</td><td>NL</td><td>80.0</td><td>55.8</td><td>67.9</td></tr>
+        <tr><td>GPT-5.6-Luna</td><td>6.46</td><td>50.42</td><td>2,678</td><td>6,366</td></tr>
+        <tr><td>Kimi-K2.5</td><td>8.12</td><td>54.38</td><td>1,813</td><td>5,981</td></tr>
+        <tr><td>DeepSeek-V4-Flash</td><td>10.83</td><td>59.17</td><td>1,799</td><td>9,024</td></tr>
+        <tr><td>Qwen3.5-Plus</td><td>20.62</td><td>60.63</td><td>6,628</td><td>10,686</td></tr>
+        <tr><td>BTGenBot-MA (Llama-3.2-1B)</td><td colspan="2">59.0</td><td colspan="2">1,102</td></tr>
+        <tr><td>BTGenBot-MA (R1-Distill-Qwen-1.5B)</td><td colspan="2">38.8</td><td colspan="2">1,076</td></tr>
+        <tr><td>MRBTP-Adapted<sup>&dagger;</sup></td><td colspan="2">42.1</td><td colspan="2">&mdash;</td></tr>
+        <tr class="ours-row"><td>CLIMB (Llama-3.2-1B-Instruct)</td><td colspan="2"><strong>67.9</strong></td><td colspan="2">1,104</td></tr>
+        <tr class="ours-row"><td>CLIMB (R1-Distill-Qwen-1.5B)</td><td colspan="2"><strong>62.9</strong></td><td colspan="2">1,092</td></tr>
       </tbody>
     </table>
-    <p class="is-size-7">† Official MABTP search with oracle nominal formalization; its reactive trees are
+    <p class="is-size-7">&dagger; Official MABTP search with oracle nominal formalization; its reactive trees are
     executed natively by the same executor; no reference plan or target tree exposed; LLM subtree plugin disabled.
     Despite privileged input, it lags behind: its fallbacks can only retry or take over equivalent nominal
     actions, and its large backup trees stall on tightly coupled three-robot tasks.</p>
   </div>
-  <div class="columns" style="margin-top:1.5em">
-    <div class="column has-text-centered"><img src="static/images/pareto.png" style="max-width:100%"><p class="is-size-7">Success vs. token cost.</p></div>
-    <div class="column has-text-centered"><img src="static/images/passk.png" style="max-width:100%"><p class="is-size-7">Pass@k with executor-guided verification (EGVD).</p></div>
-  </div>
-</div></section>
+  <div class="content has-text-centered" style="margin-top:1.6em">
+    <img src="static/images/pareto.png" alt="Success rate vs. token cost" style="max-width:100%">
+    <p class="is-size-7">Execution success vs. token cost. CLIMB sits in the upper-left corner:
+    highest success at roughly one-fifth to one-tenth of the token cost of the best 5-shot LLM.</p>
+  </div></section>
 
 <section class="section"><div class="container is-max-desktop">
   <h2 class="title is-3">Demo: mission → executable behavior tree</h2>
