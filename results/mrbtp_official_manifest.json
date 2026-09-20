@@ -1,0 +1,27 @@
+{
+  "created_utc": "2026-09-19T06:24:29Z",
+  "python": "3.10.8",
+  "platform": "Linux-5.15.0-97-generic-x86_64-with-glibc2.35",
+  "cpu_model": "Intel(R) Xeon(R) Gold 6430",
+  "cpu_count": 128,
+  "PYTHONHASHSEED": "0",
+  "command_primary": "python pipeline/baselines/run_mrbtp.py --data pipeline/outputs/dataset/test.jsonl --out pipeline/outputs/results/mrbtp_official_faultaware.json --workers 1 --timeout 20.0",
+  "command_lower_bound": "same + --no-fault-recovery",
+  "file_sha256_16": {
+    "runner": "91bb732fa9552604",
+    "executor": "a35e6eac819697d6",
+    "strips_domains": "d17da579784b0a73",
+    "strips_core": "c4c1f6afb81e7e69",
+    "data_test": "7cf89e6f0b6c492f",
+    "mabtp_basic": "08afed41356b910f",
+    "planning_agent": "e8f53c340d7a9d2c",
+    "planning_condition": "7c44f252b952a4c4",
+    "planning_action": "1e2bbffe25b28d72",
+    "any_tree_node": "f3e655f06bbbac47"
+  },
+  "pip_versions": {
+    "numpy": "2.2.6",
+    "gymnasium": "0.29.1",
+    "minigrid": "2.3.1"
+  }
+}

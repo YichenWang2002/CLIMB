@@ -1,0 +1,50 @@
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Parallel success_threshold="2" failure_threshold="1">
+            <SubTree ID="Agent_alpha"/>
+            <SubTree ID="Agent_beta"/>
+        </Parallel>
+    </BehaviorTree>
+    <BehaviorTree ID="Agent_alpha">
+        <Sequence>
+            <Fallback>
+                <MoveTo robot="alpha" from="shelf_b" to="charge_bay"/>
+                <Sequence>
+                    <ClearPath robot="alpha" edge_from="shelf_b" edge_to="charge_bay"/>
+                    <MoveTo robot="alpha" from="shelf_b" to="charge_bay"/>
+                </Sequence>
+            </Fallback>
+            <Sequence>
+                <IsAtLocation robot="alpha" location="charge_bay"/>
+                <IsItemAt item="crate_blue" location="charge_bay"/>
+                <PickUp robot="alpha" item="crate_blue" location="charge_bay"/>
+            </Sequence>
+            <Fallback>
+                <MoveTo robot="alpha" from="charge_bay" to="shelf_b"/>
+                <Sequence>
+                    <ClearPath robot="alpha" edge_from="charge_bay" edge_to="shelf_b"/>
+                    <MoveTo robot="alpha" from="charge_bay" to="shelf_b"/>
+                </Sequence>
+            </Fallback>
+            <Sequence>
+                <IsAtLocation robot="alpha" location="shelf_b"/>
+                <SignalReady robot="alpha" item="crate_blue" to="beta"/>
+                <HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="Agent_beta">
+        <Sequence>
+            <MoveTo robot="beta" from="shelf_a" to="shelf_b"/>
+            <Sequence>
+                <WaitReady robot="beta" item="crate_blue" from="alpha"/>
+                <HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/>
+            </Sequence>
+            <MoveTo robot="beta" from="shelf_b" to="shelf_a"/>
+            <Sequence>
+                <IsCarrying robot="beta" item="crate_blue"/>
+                <PlaceDown robot="beta" item="crate_blue" location="shelf_a"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+</root>

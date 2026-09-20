@@ -1,0 +1,37 @@
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Parallel success_threshold="2" failure_threshold="1">
+            <SubTree ID="Agent_alpha"/>
+            <SubTree ID="Agent_beta"/>
+        </Parallel>
+    </BehaviorTree>
+    <BehaviorTree ID="Agent_alpha">
+        <Sequence>
+            <MoveTo robot="alpha" from="loading_dock" to="shelf_a"/>
+            <Sequence>
+                <IsAtLocation robot="alpha" location="shelf_a"/>
+                <IsItemAt item="crate_blue" location="shelf_a"/>
+                <PickUp robot="alpha" item="crate_blue" location="shelf_a"/>
+            </Sequence>
+            <MoveTo robot="alpha" from="shelf_a" to="loading_dock"/>
+            <Sequence>
+                <IsAtLocation robot="alpha" location="loading_dock"/>
+                <SignalReady robot="alpha" item="crate_blue" to="beta"/>
+                <HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="loading_dock"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="Agent_beta">
+        <Sequence>
+            <Sequence>
+                <WaitReady robot="beta" item="crate_blue" from="alpha"/>
+                <HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="loading_dock"/>
+            </Sequence>
+            <MoveTo robot="beta" from="loading_dock" to="shelf_b"/>
+            <Sequence>
+                <IsCarrying robot="beta" item="crate_blue"/>
+                <PlaceDown robot="beta" item="crate_blue" location="shelf_b"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+</root>

@@ -1,0 +1,168 @@
+{
+ "domain": "warehouse",
+ "tier": "T2",
+ "scenario": "relay",
+ "robots": [
+  "alpha",
+  "beta"
+ ],
+ "items": [
+  "crate_blue"
+ ],
+ "init_dynamic": [
+  [
+   "item_at",
+   "crate_blue",
+   "shelf_a"
+  ],
+  [
+   "at",
+   "alpha",
+   "loading_dock"
+  ],
+  [
+   "free",
+   "alpha"
+  ],
+  [
+   "mobile",
+   "alpha"
+  ],
+  [
+   "at",
+   "beta",
+   "loading_dock"
+  ],
+  [
+   "free",
+   "beta"
+  ],
+  [
+   "mobile",
+   "beta"
+  ],
+  [
+   "light",
+   "crate_red"
+  ],
+  [
+   "light",
+   "crate_blue"
+  ],
+  [
+   "light",
+   "box_small"
+  ],
+  [
+   "heavy",
+   "pallet_heavy"
+  ]
+ ],
+ "goal": [
+  [
+   "item_at",
+   "crate_blue",
+   "shelf_b"
+  ]
+ ],
+ "faults": [],
+ "zones": {
+  "alpha": [
+   "shelf_a",
+   "loading_dock"
+  ],
+  "beta": [
+   "loading_dock",
+   "shelf_b"
+  ]
+ },
+ "connected": [
+  [
+   "charge_bay",
+   "shelf_b"
+  ],
+  [
+   "charge_bay",
+   "shelf_c"
+  ],
+  [
+   "loading_dock",
+   "shelf_a"
+  ],
+  [
+   "loading_dock",
+   "shelf_b"
+  ],
+  [
+   "loading_dock",
+   "shelf_c"
+  ],
+  [
+   "packing_station",
+   "shelf_a"
+  ],
+  [
+   "shelf_a",
+   "loading_dock"
+  ],
+  [
+   "shelf_a",
+   "packing_station"
+  ],
+  [
+   "shelf_a",
+   "shelf_c"
+  ],
+  [
+   "shelf_b",
+   "charge_bay"
+  ],
+  [
+   "shelf_b",
+   "loading_dock"
+  ],
+  [
+   "shelf_c",
+   "charge_bay"
+  ],
+  [
+   "shelf_c",
+   "loading_dock"
+  ],
+  [
+   "shelf_c",
+   "shelf_a"
+  ]
+ ],
+ "charge_stations": [
+  "charge_bay"
+ ],
+ "can_reach": [
+  [
+   "alpha",
+   "loading_dock"
+  ],
+  [
+   "alpha",
+   "shelf_a"
+  ],
+  [
+   "beta",
+   "loading_dock"
+  ],
+  [
+   "beta",
+   "shelf_b"
+  ]
+ ],
+ "plan": [
+  "MoveTo(r=alpha,l1=loading_dock,l2=shelf_a)",
+  "PickUp(r=alpha,i=crate_blue,l=shelf_a)",
+  "MoveTo(r=alpha,l1=shelf_a,l2=loading_dock)",
+  "Handover(g=alpha,t=beta,i=crate_blue,l=loading_dock)",
+  "MoveTo(r=beta,l1=loading_dock,l2=shelf_b)",
+  "PlaceDown(r=beta,i=crate_blue,l=shelf_b)"
+ ],
+ "plan_len": 6,
+ "n_agents": 2
+}

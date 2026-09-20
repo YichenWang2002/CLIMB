@@ -1,0 +1,45 @@
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Parallel success_threshold="2" failure_threshold="1">
+            <SubTree ID="Agent_alpha"/>
+            <SubTree ID="Agent_beta"/>
+        </Parallel>
+    </BehaviorTree>
+    <BehaviorTree ID="Agent_alpha">
+        <Sequence>
+            <Sequence>
+                <IsAtLocation robot="alpha" location="packing_station"/>
+                <CoPickUp robot1="alpha" robot2="beta" item="pallet_heavy" location="packing_station"/>
+            </Sequence>
+            <CoMoveTo robot1="alpha" robot2="beta" item="pallet_heavy" from="packing_station" to="shelf_b"/>
+            <CoMoveTo robot1="alpha" robot2="beta" item="pallet_heavy" from="shelf_b" to="loading_dock"/>
+            <CoMoveTo robot1="alpha" robot2="beta" item="pallet_heavy" from="loading_dock" to="shelf_a"/>
+            <Sequence>
+                <IsAtLocation robot="alpha" location="shelf_a"/>
+                <CoPlaceDown robot1="alpha" robot2="beta" item="pallet_heavy" location="shelf_a"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="Agent_beta">
+        <Sequence>
+            <Fallback>
+                <MoveTo robot="beta" from="shelf_c" to="packing_station"/>
+                <Sequence>
+                    <ClearPath robot="beta" edge_from="shelf_c" edge_to="packing_station"/>
+                    <MoveTo robot="beta" from="shelf_c" to="packing_station"/>
+                </Sequence>
+            </Fallback>
+            <Sequence>
+                <IsAtLocation robot="beta" location="packing_station"/>
+                <CoPickUp robot1="alpha" robot2="beta" item="pallet_heavy" location="packing_station"/>
+            </Sequence>
+            <CoMoveTo robot1="alpha" robot2="beta" item="pallet_heavy" from="packing_station" to="shelf_b"/>
+            <CoMoveTo robot1="alpha" robot2="beta" item="pallet_heavy" from="shelf_b" to="loading_dock"/>
+            <CoMoveTo robot1="alpha" robot2="beta" item="pallet_heavy" from="loading_dock" to="shelf_a"/>
+            <Sequence>
+                <IsAtLocation robot="beta" location="shelf_a"/>
+                <CoPlaceDown robot1="alpha" robot2="beta" item="pallet_heavy" location="shelf_a"/>
+            </Sequence>
+        </Sequence>
+    </BehaviorTree>
+</root>

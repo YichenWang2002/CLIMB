@@ -1,0 +1,216 @@
+{
+ "domain": "warehouse",
+ "tier": "T2",
+ "scenario": "heavy",
+ "robots": [
+  "alpha",
+  "beta"
+ ],
+ "items": [
+  "pallet_heavy"
+ ],
+ "init_dynamic": [
+  [
+   "item_at",
+   "pallet_heavy",
+   "packing_station"
+  ],
+  [
+   "at",
+   "alpha",
+   "packing_station"
+  ],
+  [
+   "free",
+   "alpha"
+  ],
+  [
+   "mobile",
+   "alpha"
+  ],
+  [
+   "at",
+   "beta",
+   "shelf_c"
+  ],
+  [
+   "free",
+   "beta"
+  ],
+  [
+   "mobile",
+   "beta"
+  ],
+  [
+   "light",
+   "crate_red"
+  ],
+  [
+   "light",
+   "crate_blue"
+  ],
+  [
+   "light",
+   "box_small"
+  ],
+  [
+   "heavy",
+   "pallet_heavy"
+  ]
+ ],
+ "goal": [
+  [
+   "item_at",
+   "pallet_heavy",
+   "shelf_a"
+  ]
+ ],
+ "faults": [
+  {
+   "type": "blocked_edge",
+   "edge": [
+    "shelf_c",
+    "packing_station"
+   ]
+  }
+ ],
+ "zones": {
+  "alpha": [
+   "shelf_a",
+   "shelf_b",
+   "shelf_c",
+   "packing_station",
+   "loading_dock",
+   "charge_bay"
+  ],
+  "beta": [
+   "shelf_a",
+   "shelf_b",
+   "shelf_c",
+   "packing_station",
+   "loading_dock",
+   "charge_bay"
+  ]
+ },
+ "connected": [
+  [
+   "charge_bay",
+   "shelf_a"
+  ],
+  [
+   "charge_bay",
+   "shelf_b"
+  ],
+  [
+   "charge_bay",
+   "shelf_c"
+  ],
+  [
+   "loading_dock",
+   "shelf_a"
+  ],
+  [
+   "loading_dock",
+   "shelf_b"
+  ],
+  [
+   "packing_station",
+   "shelf_b"
+  ],
+  [
+   "packing_station",
+   "shelf_c"
+  ],
+  [
+   "shelf_a",
+   "charge_bay"
+  ],
+  [
+   "shelf_a",
+   "loading_dock"
+  ],
+  [
+   "shelf_b",
+   "charge_bay"
+  ],
+  [
+   "shelf_b",
+   "loading_dock"
+  ],
+  [
+   "shelf_b",
+   "packing_station"
+  ],
+  [
+   "shelf_c",
+   "charge_bay"
+  ],
+  [
+   "shelf_c",
+   "packing_station"
+  ]
+ ],
+ "charge_stations": [
+  "charge_bay"
+ ],
+ "can_reach": [
+  [
+   "alpha",
+   "charge_bay"
+  ],
+  [
+   "alpha",
+   "loading_dock"
+  ],
+  [
+   "alpha",
+   "packing_station"
+  ],
+  [
+   "alpha",
+   "shelf_a"
+  ],
+  [
+   "alpha",
+   "shelf_b"
+  ],
+  [
+   "alpha",
+   "shelf_c"
+  ],
+  [
+   "beta",
+   "charge_bay"
+  ],
+  [
+   "beta",
+   "loading_dock"
+  ],
+  [
+   "beta",
+   "packing_station"
+  ],
+  [
+   "beta",
+   "shelf_a"
+  ],
+  [
+   "beta",
+   "shelf_b"
+  ],
+  [
+   "beta",
+   "shelf_c"
+  ]
+ ],
+ "plan": [
+  "MoveTo(r=beta,l1=shelf_c,l2=packing_station)",
+  "CoPickUp(r1=alpha,r2=beta,i=pallet_heavy,l=packing_station)",
+  "CoMoveTo(r1=alpha,r2=beta,i=pallet_heavy,l1=packing_station,l2=shelf_b)",
+  "CoMoveTo(r1=alpha,r2=beta,i=pallet_heavy,l1=shelf_b,l2=loading_dock)",
+  "CoMoveTo(r1=alpha,r2=beta,i=pallet_heavy,l1=loading_dock,l2=shelf_a)",
+  "CoPlaceDown(r1=alpha,r2=beta,i=pallet_heavy,l=shelf_a)"
+ ],
+ "plan_len": 6,
+ "n_agents": 2
+}

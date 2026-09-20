@@ -1,0 +1,19 @@
+# Waypoints for the `warehouse` dataset domain, mapped onto the
+# aws-robomaker-small-warehouse-world-ros2 Gazebo world.
+#
+# !!! PLACEHOLDER COORDINATES !!!
+# These x/y/yaw values are hand-picked approximations and were NOT calibrated
+# against the actual AWS world on a live system. You MUST jog a robot (or use
+# rviz "Publish Point") in your own Gazebo instance and replace every entry
+# before relying on navigation.
+#
+# Location ids come from mBT/pipeline/datagen/strips/domains.py (warehouse).
+# Frame: "map". yaw in radians.
+
+waypoints:
+  charge_bay:       {x: 0.0,  y: 0.0,  yaw: 0.0}
+  packing_station:  {x: 1.8,  y: 0.0,  yaw: 0.0}
+  shelf_a:          {x: 3.2,  y: 2.2,  yaw: 1.57}
+  shelf_b:          {x: 3.2,  y: -2.2, yaw: -1.57}
+  shelf_c:          {x: 1.0,  y: -3.6, yaw: 3.14}
+  loading_dock:     {x: -2.6, y: 0.0,  yaw: 3.14}
