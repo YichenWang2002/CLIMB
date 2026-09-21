@@ -43,11 +43,14 @@
                  border-radius: 6px; font-size: .92rem; white-space: pre-wrap; }
   details summary { cursor: pointer; color: var(--teal); }
 
-  table.results th, table.results td { text-align: center; padding: .38em .8em; }
+  table.results { border-collapse: collapse; }
+  table.results th, table.results td { text-align: center; padding: .42em .8em;
+    border: 1px solid #c9d8d5 !important; }
   table.results td:first-child, table.results th:first-child { text-align: left; }
-  table.results thead th { background: #12303b; color: #fff; border-color: #12303b !important; }
-  table.results td { border-color: #d7e2e0 !important; }
-  .ours-row { background: var(--teal-soft) !important; font-weight: 600; }
+  table.results thead th { background: #eef4f2; color: var(--ink); font-weight: 600; }
+  table.results tbody tr:nth-child(even):not(.ours-row) { background: #fafcfb; }
+  .ours-row { background: var(--teal-soft) !important; font-weight: 700; }
+  .delta-down { color: #b4232a; font-weight: 600; }
 
   footer.site-footer { background: #12303b; color: #b9cdc9; padding: 26px 0 34px; }
   footer.site-footer a { color: #9adccd; }
@@ -59,7 +62,7 @@
   <div class="hero-body"><div class="container is-max-widescreen">
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
-        <p class="tag-paper">ICASSP &middot; Code &amp; Benchmark</p>
+        <p class="tag-paper">ICASSP 2027 under review</p>
         <h1 class="title is-1 publication-title">CLIMB</h1>
         <h2 class="subtitle is-4">(<strong>C</strong>urriculum <strong>L</strong>earn<strong>i</strong>ng for <strong>M</strong>ulti-agent <strong>B</strong>ehavior Tree Generation with Small Language Models)</h2>
         <div class="is-size-5 publication-authors">
@@ -87,7 +90,6 @@
 </section>
 
 <section class="section"><div class="container is-max-desktop">
-  <p class="kicker">00 &middot; Abstract</p>
     <h2 class="title is-3">Abstract</h2>
   <div class="content has-text-justified">
     <p>Behavior trees have become a popular approach for modeling robot behaviors through recursive tick
@@ -110,7 +112,6 @@
 </div></section>
 
 <section class="section hero is-light" band-alt><div class="container is-max-desktop">
-  <p class="kicker">01 &middot; Method</p>
     <h2 class="title is-3">Method Overview</h2>
   <div class="content has-text-centered"><img src="static/images/overview.png" alt="CLIMB overview" style="max-width:100%"></div>
   <div class="content">
@@ -127,7 +128,6 @@
 </div></section>
 
 <section class="section"><div class="container is-max-desktop">
-  <p class="kicker">02 &middot; Replay videos</p>
     <h2 class="title is-3">ROS&nbsp;2/Gazebo replay videos</h2>
   <p>Physics-engine-driven replays of CLIMB-generated trees with 2&ndash;3 TurtleBot3 robots in AWS RoboMaker
   worlds (ROS&nbsp;2 Humble + Nav2; videos sped up &asymp;5&times;). Success is still judged by the symbolic
@@ -139,7 +139,7 @@
       bookcase to the reading hall; the restoration-lab passage may be blocked, forcing a
       <code>ClearPath</code> fallback recovery. <strong>CLIMB completes the mission</strong> while flat SFT and
       all four 5-shot general-purpose LLM baselines fail.</p>
-      <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Executed behavior tree (CLIMB output)</summary>
+      <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Behavior tree (CLIMB output)</summary>
         <img src="static/images/bt_case05.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
     </div>
     <div class="column">
@@ -148,14 +148,13 @@
       across three robots to the compost area over a blocked passage, with a fumbling-handover hazard
       on the way. <strong>CLIMB completes the mission</strong> while flat SFT, GPT-5.6-Luna, and
       DeepSeek-V4-Flash fail.</p>
-      <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Executed behavior tree (CLIMB output)</summary>
+      <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Behavior tree (CLIMB output)</summary>
         <img src="static/images/bt_case39.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
     </div>
   </div>
 </div></section>
 
 <section class="section" band-alt><div class="container is-max-desktop">
-  <p class="kicker">03 &middot; Dataset</p>
     <h2 class="title is-3">Dataset</h2>
   <div class="content has-text-centered"><img src="static/images/dataset_pipeline.png" alt="benchmark pipeline" style="max-width:100%"></div>
   <div class="content">
@@ -168,7 +167,6 @@
 </div></section>
 
 <section class="section hero is-light"><div class="container is-max-desktop">
-  <p class="kicker">04 &middot; Results</p>
     <h2 class="title is-3">Results</h2>
   <div class="content">
     <table class="table is-bordered results" style="margin:auto">
@@ -193,6 +191,24 @@
     Despite privileged input, it lags behind: its fallbacks can only retry or take over equivalent nominal
     actions, and its large backup trees stall on tightly coupled three-robot tasks.</p>
   </div>
+  <h3 class="title is-5" style="margin-top:2em">Component ablation</h3>
+  <div class="content">
+    <table class="table is-bordered results" style="margin:auto">
+      <thead>
+        <tr><th rowspan="2">Configuration</th><th colspan="3">Llama-3.2-1B</th><th colspan="3">R1-Distill-Qwen-1.5B</th></tr>
+        <tr><th>SR (%)</th><th>&Delta; SR</th><th>Tokens</th><th>SR (%)</th><th>&Delta; SR</th><th>Tokens</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>w/o planner supervision<sup>&dagger;</sup></td><td>49.0</td><td class="delta-down">&darr; 18.9</td><td>1,090</td><td>51.3</td><td class="delta-down">&darr; 11.6</td><td>1,081</td></tr>
+        <tr><td>w/o SPCL</td><td>63.8</td><td class="delta-down">&darr; 4.1</td><td>1,107</td><td>50.6</td><td class="delta-down">&darr; 12.3</td><td>1,094</td></tr>
+        <tr><td>w/o SCD</td><td>64.2</td><td class="delta-down">&darr; 3.7</td><td>1,098</td><td>51.3</td><td class="delta-down">&darr; 11.6</td><td>1,075</td></tr>
+        <tr class="ours-row"><td>CLIMB (full)</td><td><strong>67.9</strong></td><td>&mdash;</td><td>1,104</td><td><strong>62.9</strong></td><td>&mdash;</td><td>1,092</td></tr>
+      </tbody>
+    </table>
+    <p class="is-size-7">&dagger; DeepSeek regenerates each target under the same 5-shot prompting with the
+    same executor filter (4,160 verified targets at 69.3% yield). &Delta; SR is the drop against the
+    full model on the 480-task suite.</p>
+  </div>
   <div class="content has-text-centered" style="margin-top:1.6em">
     <img src="static/images/pareto.png" alt="Success rate vs. token cost" style="max-width:100%">
     <p class="is-size-7">Execution success vs. token cost. CLIMB sits in the upper-left corner:
@@ -200,7 +216,6 @@
   </div></section>
 
 <section class="section" band-alt><div class="container is-max-desktop">
-  <p class="kicker">05 &middot; Interactive demo</p>
     <h2 class="title is-3">Demo: mission → executable behavior tree</h2>
 
   <h3 class="title is-5">1. Three-agent relay with a transient handover fault</h3>
