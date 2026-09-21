@@ -73,8 +73,8 @@ def main():
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--rounds", type=int, default=3)
     ap.add_argument("--buckets", type=int, default=4)
-    ap.add_argument("--window", default="1,2,4",
-                    help="comma list of bucket-prefix sizes per round")
+    ap.add_argument("--window", required=True,
+                    help="comma list of bucket-prefix sizes per round (withheld; set your own)")
     ap.add_argument("--boosts", default="",
                     help="per-round bucket weight multipliers, rounds "
                          "separated by '|', e.g. '1,1|1,1,1.5|0.5,0.75,1.5,3'. "
@@ -382,12 +382,13 @@ def main():
         "bucket_sizes": [int((bucket == b).sum()) for b in range(args.buckets)],
         "bucket_difficulty_mean": [float(difficulty[bucket == b].mean())
                                    for b in range(args.buckets)],
-        "bucket_tiers": {
+        "bucket_scenarios": {
             str(b): {
-                t: int(sum(1 for i in range(n)
+                s: int(sum(1 for i in range(n)
                            if bucket[i] == b
-                           and train[i].get("meta", {}).get("tier") == t))
-                for t in ("T1", "T2", "T3")}
+                           and train[i].get("meta", {}).get("scenario", "?") == s))
+                for s in sorted({train[i].get("meta", {}).get("scenario", "?")
+                                 for i in range(n)})}
             for b in range(args.buckets)},
         "difficulty_utility_rank_corr": float(np.corrcoef(
             midrank01(difficulty), midrank01(utility))[0, 1]),
@@ -411,7 +412,7 @@ def main():
     report["score_sidecar"] = str(score_path)
     (out_dir / "report.json").write_text(json.dumps(report, indent=2))
     print(json.dumps({"bucket_sizes": report["bucket_sizes"],
-                      "bucket_tiers": report["bucket_tiers"],
+                      "bucket_scenarios": report["bucket_scenarios"],
                       "d_weights": report["difficulty_fusion_weights"],
                       "du_rank_corr": report["difficulty_utility_rank_corr"]},
                      indent=2), flush=True)

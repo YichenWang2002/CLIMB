@@ -15,11 +15,12 @@ from pathlib import Path
 import torch
 
 import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+import os
 from datagen.executor import execute
 from eval.evaluate import reconstruct_task, load_jsonl
-from experiments.bt_ducl.common import record_id, apply_chat_template_compat
+from common.data import record_id, apply_chat_template_compat
 
-BASE = "models/llama32-1b"
+BASE = os.environ.get("CLIMB_BASE_MODEL", "meta-llama/Llama-3.2-1B-Instruct")
 
 NAME_ID = re.compile(r"([A-Za-z][A-Za-z'\- ]*?)\s*\(([a-z_0-9]+)\)")
 ATTR_RE = re.compile(r'(from|to|location|item|robot|station|giver|receiver|robot1|robot2|edge_from|edge_to)="([^"]*)$')
@@ -371,7 +372,7 @@ def main():
             except Exception as e:
                 res = {"success": False, "reason": f"error: {e}"}
             details.append({"record_id": record_id(r),
-                            "tier": r["meta"]["tier"], "domain": r["meta"]["domain"],
+                            "scenario": r["meta"].get("scenario", ""), "domain": r["meta"]["domain"],
                             "scenario": r["meta"].get("scenario", ""),
                             "success": res["success"], "reason": res["reason"]})
         done = sum(d["success"] for d in details)
@@ -379,15 +380,15 @@ def main():
 
     from collections import Counter
     per = {}
-    for t in ("T1","T2","T3"):
-        sub = [d for d in details if d["tier"]==t]
-        per[t] = {"n": len(sub), "ok": sum(d["success"] for d in sub)}
+    for s in sorted({d["scenario"] for d in details}):
+        sub = [d for d in details if d["scenario"]==s]
+        per[s] = {"n": len(sub), "ok": sum(d["success"] for d in sub)}
     n = len(details); ok = sum(d["success"] for d in details)
-    out = {"n": n, "base": a.base, "exec_success_rate": ok/n, "per_tier": per,
+    out = {"n": n, "base": a.base, "exec_success_rate": ok/n, "per_scenario": per,
            "fail_reasons": dict(Counter(d["reason"] for d in details if not d["success"])),
            "details": details, "generations": generations}
     Path(a.out).write_text(json.dumps(out, ensure_ascii=False))
-    print(json.dumps({"overall": ok/n, "per_tier": per}, indent=1))
+    print(json.dumps({"overall": ok/n, "per_scenario": per}, indent=1))
 
 
 class _Proc:

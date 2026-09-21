@@ -1,20 +1,18 @@
-"""Structural curriculum stages: assign stages purely from the target
-behavior tree's structural features -- no generation-time labels.
+"""Structural features of a gold behavior tree -- no generation-time labels.
 
 Features (mechanically computed from the output XML):
   n_sync   handshake synchronization pairs (SignalReady/WaitReady, HandoverGive/Take)
            -- "blackboard sync": points where two agents' timelines couple
   n_co     tightly-coupled joint action nodes (CoPickUp/CoMoveTo/CoPlaceDown)
   n_fb     Fallback recovery structures (failure-branch planning)
-  depth    max tree depth; n_nodes: tree size; plan_len not needed here
+  depth    max tree depth; n_nodes: tree size
 
-Stage predicate (deterministic, domain-agnostic):
-  Stage 1: n_sync=0 and n_co=0 and n_fb=0   (single-agent compositional skills)
-  Stage 2: (n_sync>0 or n_co>0) and n_fb=0  (coordination, no recovery)
-  Stage 3: n_fb>0                           (failure-recovery structures)
+structural_stage maps the features to a coarse coordination level used for
+reporting only (1 = single-agent skill, 2 = coordination, 3 = coordination
+with fault recovery); SPCL itself consumes the raw features, not the stage.
 
 Usage:
-  python -m curriculum.structural --data outputs/dataset/train_aug10.jsonl
+  python -m curriculum.structural --data data/train.jsonl
 """
 from __future__ import annotations
 
@@ -22,11 +20,10 @@ import argparse
 import json
 import sys
 import xml.etree.ElementTree as ET
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
-import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-from curriculum.build_curriculum import stage_of  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from datagen.executor import re_extract  # noqa: E402
 
 SYNC_TAGS = {"SignalReady", "WaitReady", "HandoverGive", "HandoverTake"}
@@ -61,40 +58,27 @@ def structural_stage(feat: dict) -> int:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
+    ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args()
 
-    records = [json.loads(l) for l in Path(args.data).read_text().splitlines() if l.strip()]
-    conf = Counter()          # (label_stage, structural_stage) -> count
-    feat_by_stage = {1: Counter(), 2: Counter(), 3: Counter()}
-    mismatches = []
-    for i, r in enumerate(records):
-        feat = structural_features(r["output"])
-        s_struct = structural_stage(feat)
-        s_label = stage_of(r)
-        conf[(s_label, s_struct)] += 1
-        for k, v in feat.items():
-            feat_by_stage[s_struct][k] += v
-        if s_struct != s_label and len(mismatches) < 10:
-            mismatches.append((i, s_label, s_struct, feat))
+    records = [json.loads(l) for l in Path(args.data).read_text().splitlines()
+               if l.strip()]
+    if args.limit:
+        records = records[: args.limit]
 
-    n = len(records)
-    agree = sum(conf[(s, s)] for s in (1, 2, 3))
-    print(f"n={n}  agreement={agree}/{n} = {agree / n:.2%}\n")
-    print("confusion (rows=label stage_of, cols=structural):")
-    print("          S1    S2    S3")
-    for sl in (1, 2, 3):
-        row = [conf[(sl, sc)] for sc in (1, 2, 3)]
-        print(f"  label{sl} {row[0]:5d} {row[1]:5d} {row[2]:5d}")
-    print("\nmean features per structural stage:")
-    for s in (1, 2, 3):
-        tot = sum(conf[(sl, s)] for sl in (1, 2, 3))
-        if tot:
-            means = {k: round(v / tot, 2) for k, v in feat_by_stage[s].items()}
-            print(f"  S{s}: n={tot}  {means}")
-    if mismatches:
-        print("\nsample mismatches (idx, label, structural, features):")
-        for m in mismatches:
-            print(" ", m)
+    stage_size = Counter()
+    feat_by_stage = defaultdict(Counter)
+    for r in records:
+        feat = structural_features(r["output"])
+        s = structural_stage(feat)
+        stage_size[s] += 1
+        feat_by_stage[s].update(feat)
+
+    print(f"n={len(records)}")
+    for s in sorted(feat_by_stage):
+        tot = sum(feat_by_stage[s].values())
+        means = {k: round(v / tot, 2) for k, v in feat_by_stage[s].items()}
+        print(f"  stage {s}: n={stage_size[s]}  mean features {means}")
 
 
 if __name__ == "__main__":

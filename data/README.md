@@ -1,20 +1,18 @@
-# CLIMB corpus and benchmark
+# CLIMB dataset
 
-Executor-verified corpus of natural-language missions paired with executable
-BehaviorTree.CPP v4 XML for 2–3 robot teams. Every gold tree in every split
-was produced by a STRIPS planner, compiled to XML, and **validated by the
-symbolic executor** (`datagen/executor.py`) against the task's world model
-with the injected faults active — a tree is in the corpus only if it ticks to
-`SUCCESS` and reaches every mission goal.
+Executor-verified pairs of natural-language missions and executable
+BehaviorTree.CPP v4 XML for 2–3 robot teams. Every gold tree was produced by
+a STRIPS planner, compiled to XML, and **validated by the symbolic executor**
+(`datagen/executor.py`) against the task's world model with the injected
+faults active — a tree is included only if it ticks to `SUCCESS` and reaches
+every mission goal.
 
 Missions come in two coordination families (`meta.scenario`):
 
-- **relay-transport** (`relay`, `relay+service`) — an item is relayed across
-  robots via explicit handover/synchronization nodes;
-- **joint-heavy-transport** (`heavy`, `heavy+service`, `heavy+extra`,
-  `heavy+extra+service`) — synchronous joint actions (co-carry) with optional
-  extra goals; recoverable faults (blocked passages, battery budgets, fumbled
-  handovers) are declared in `meta.faults`.
+- **relay-transport** (`relay`) — an item is relayed across robots via
+  explicit handover / synchronization nodes;
+- **joint-heavy-transport** (`heavy`) — synchronous joint actions
+  (co-carry), optionally with extra goals or services.
 
 Training/validation use four seen domains (warehouse, hospital,
 search_rescue, office); the test split uses **only two unseen domains**
@@ -24,20 +22,13 @@ search_rescue, office); the test split uses **only two unseen domains**
 
 | File | Tasks | Domains | Purpose |
 |---|---:|---|---|
-| `train.jsonl` | 6,000 | 4 seen domains | raw executor-validated training set |
-| `train_aug10.jsonl` | 6,000 | 4 seen domains | training set used for **all paper runs** (~10% of records carry a renamed primitive, see below) |
-| `val.jsonl` | 600 | 4 seen domains | validation split; reference distribution for the SPCL utility term |
+| `train.jsonl` | 6,000 | 4 seen domains | training set used in all experiments |
+| `val.jsonl` | 600 | 4 seen domains | validation; reference distribution for the SPCL utility term |
 | `test.jsonl` | **480** | **library, greenhouse (unseen)** | held-out multi-agent benchmark |
 
-Test-suite composition (matches the paper exactly): **320 relay-transport +
-160 joint-heavy-transport missions; 357/480 tasks contain injected recoverable
-faults**; 240 tasks per domain.
-
-Scenario counts in `test.jsonl`:
-
-| scenario | relay | relay+service | heavy | heavy+service | heavy+extra | heavy+extra+service |
-|---|---:|---:|---:|---:|---:|---:|
-| tasks | 234 | 86 | 61 | 51 | 23 | 25 |
+Test-suite composition: **320 relay-transport + 160 joint-heavy-transport**
+missions; **357/480** contain injected recoverable faults (blocked passages,
+battery budgets, fumbled handovers); 240 tasks per domain.
 
 ## Record format
 
@@ -50,54 +41,28 @@ One JSON object per line:
   "output": "gold BehaviorTree.CPP v4 XML",
   "meta": { "domain": "library", "scenario": "relay",
             "robots": ["alpha", "beta"], "items": ["box_a"],
-            "init_dynamic": [["at", "alpha", "dock_a"], ...],
-            "goal": [["item_at", "box_a", "station_b"], ...],
-            "faults": [{"type": "blocked_edge", "edge": ["hall_a", "hall_b"]}, ...],
+            "init_dynamic": [["at", "alpha", "dock_a"]],
+            "goal": [["item_at", "box_a", "station_b"]],
+            "faults": [{"type": "blocked_edge", "edge": ["hall_a", "hall_b"]}],
             "connected": [...], "charge_stations": [...], "can_reach": [...],
             "zones": {...}, "plan": [...], "plan_len": 12, "n_agents": 2 }
 }
 ```
 
 `meta` is exactly what `eval.evaluate.reconstruct_task` needs to rebuild the
-STRIPS world model and judge a generated tree. It is **evaluation
-infrastructure**: never send it (or `output`) to a model.
+STRIPS world model and judge a generated tree. It is evaluation
+infrastructure: never send it (or `output`) to a model.
 
-`train_aug10.jsonl` was produced from `train.jsonl` with
-`datagen/rename_skills.py` (`--frac 0.10 --seed 123 --include-faulted
---double-frac 0.2`): ~10% of records get one simple primitive renamed
-(e.g. `PickUp` → `FetchItem`), the NL input is regenerated so the new
-signature is described in prose, and `meta.skill_aliases` maps the new name
-back so the executor still validates the tree. No test-domain primitive is
-ever used — nothing leaks into the held-out domains.
+About 10% of the training records carry a renamed primitive
+(e.g. `PickUp` → `FetchItem`, recorded in `meta.skill_aliases`): the NL input
+is regenerated so the new signature is described in prose, which trains the
+meta-skill of grounding unseen skill signatures. No test-domain primitive is
+ever used, so nothing leaks into the held-out domains.
 
 ## Integrity (sha256)
 
 ```
-500b1863533e4f935ec05ae75ce5f1737dbbc2b444127b6bb6ce8096d6788b00  train.jsonl
-8334db9368c3da6589d6711c8e940eae8ac0e5446652407efdc1ab36308cbf96  train_aug10.jsonl
+8334db9368c3da6589d6711c8e940eae8ac0e5446652407efdc1ab36308cbf96  train.jsonl
 805b64848cf5fb300e685c7eb35ea10407b4874de99ed2b8d823b8c0f071d4ac  val.jsonl
 379fba0ce837bef4625e1c0c024f888d6d52a76d476b20246a888ede2e275ed0  test.jsonl
 ```
-
-## Additional released corpora
-
-- `train_llmteacher.jsonl` (4,160) — planner-free targets regenerated by
-  DeepSeek under the same 5-shot prompting with the same executor filter;
-  supervision-side ablation corpus ("w/o planner supervision", Table 3).
-- `train_planner_matched.jsonl` (4,160) — planner-matched comparison corpus.
-- `test_eval.jsonl` / `test_prompts.jsonl` / `fixed_5shot_demos.jsonl` —
-  copies of the prompted-baseline suite (also under `baselines_prompted/data/`).
-
-All splits carry the same schema and contain no tier labels.
-
-## Regeneration
-
-To regenerate the raw corpus from scratch (needs a DeepSeek/OpenAI-compatible
-API key for the NL step):
-
-```bash
-python -m datagen.build_dataset --full --workers 16   # writes outputs/dataset/
-```
-
-The prompted-LLM version of the test suite (prompts + executor metadata,
-no gold trees) lives in `baselines_prompted/data/`.

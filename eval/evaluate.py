@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import json
 import re
 from collections import Counter, defaultdict
@@ -24,8 +25,7 @@ import torch
 from datagen.executor import execute, re_extract
 from datagen.strips.domains import build_domain
 
-BASE = "models/llama32-1b"
-OUT = Path(__file__).resolve().parents[1] / "results"
+BASE = os.environ.get("CLIMB_BASE_MODEL", "meta-llama/Llama-3.2-1B-Instruct")
 
 
 def load_jsonl(path: str) -> list:
@@ -106,7 +106,7 @@ def score(records: list, generations: list) -> dict:
         raise ValueError(
             f"generation count {len(generations)} != record count {len(records)}")
     per_domain = defaultdict(Counter)
-    per_tier = defaultdict(Counter)
+    per_scenario = defaultdict(Counter)
     per_primitive = defaultdict(Counter)  # shared vs new_primitive (test-domain unique actions)
     reasons = Counter()
     n_xml_ok = 0
@@ -127,13 +127,13 @@ def score(records: list, generations: list) -> dict:
         reasons[res["reason"]] += 0 if ok else 1
         per_domain[meta["domain"]]["n"] += 1
         per_domain[meta["domain"]]["ok"] += ok
-        per_tier[meta["tier"]]["n"] += 1
-        per_tier[meta["tier"]]["ok"] += ok
+        per_scenario[meta["scenario"]]["n"] += 1
+        per_scenario[meta["scenario"]]["ok"] += ok
         bucket = "new_primitive" if "+service" in meta["scenario"] else "shared_primitive"
         per_primitive[bucket]["n"] += 1
         per_primitive[bucket]["ok"] += ok
         details.append({"record_id": stable_record_id(r),
-                        "domain": meta["domain"], "tier": meta["tier"],
+                        "domain": meta["domain"], "scenario": meta["scenario"],
                         "scenario": meta["scenario"],
                         "success": ok, "reason": res["reason"],
                         "recoveries": res.get("recoveries", 0)})
@@ -143,7 +143,7 @@ def score(records: list, generations: list) -> dict:
         "exec_success_rate": sum(d["success"] for d in details) / max(n, 1),
         "xml_wellformed_rate": n_xml_ok / max(n, 1),
         "per_domain": {k: dict(v) for k, v in per_domain.items()},
-        "per_tier": {k: dict(v) for k, v in per_tier.items()},
+        "per_scenario": {k: dict(v) for k, v in per_scenario.items()},
         "per_primitive": {k: dict(v) for k, v in per_primitive.items()},
         "fail_reasons": dict(reasons),
         "details": details,
@@ -160,25 +160,12 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--batch-size", type=int, default=64)
-    ap.add_argument(
-        "--prompt-mode",
-        choices=["stored", "l1", "l2", "l3"],
-        default="stored",
-        help=("instruction interface used for scoring; 'stored' preserves "
-              "the instruction already present in each record"),
-    )
     ap.add_argument("--save-generations", action="store_true")
     args = ap.parse_args()
 
     records = load_jsonl(args.data)
     if args.limit:
         records = records[:args.limit]
-    if args.prompt_mode != "stored":
-        from curriculum.build_strict_cl import INSTR
-
-        stage = int(args.prompt_mode[1:])
-        records = [dict(record, instruction=INSTR[stage])
-                   for record in records]
 
     if args.deepseek:
         gens = gen_deepseek(records, args.deepseek)
@@ -188,8 +175,7 @@ def main():
 
     result = score(records, gens)
     result["model"] = args.deepseek or args.adapter or "base"
-    result["prompt_mode"] = args.prompt_mode
-    out_path = OUT / args.out
+    out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if args.save_generations:
         result["generations"] = gens

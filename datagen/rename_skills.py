@@ -80,14 +80,15 @@ def select_records(records: list, frac: float, seed: int,
     the meta-skill fresh at the end of the curriculum (forgetting curves show
     stage-1/2-only skills decay by the end)."""
     rng = random.Random(seed)
-    by_tier = defaultdict(list)
+    by_family = defaultdict(list)
     for i, r in enumerate(records):
         if not include_faulted and r["meta"].get("faults"):
             continue
-        by_tier[r["meta"].get("tier", "?")].append(i)
+        scen = str(r["meta"].get("scenario", "?"))
+        by_family["relay" if scen.startswith("relay") else scen].append(i)
     selected = []
-    for tier in sorted(by_tier):
-        idxs = by_tier[tier]
+    for family in sorted(by_family):
+        idxs = by_family[family]
         rng.shuffle(idxs)
         k = max(1, round(len(idxs) * frac)) if frac > 0 else 0
         selected += idxs[:k]
@@ -205,7 +206,8 @@ def main():
                       "input": rec["input"] if args.skip_nl else nls[i],
                       "output": xml, "meta": meta}
         stats["renamed"] += 1
-        per_tier[meta.get("tier", "?")] += 1
+        scen = str(meta.get("scenario", "?"))
+        per_family["relay" if scen.startswith("relay") else scen] += 1
         for nm in names:
             per_name[nm] += 1
 
@@ -219,7 +221,7 @@ def main():
     print(f"renamed: {stats['renamed']}  nl_failed: {stats['nl_failed']}  "
           f"exec_failed: {stats['exec_failed']}  "
           f"exec pass rate: {stats['renamed'] / n_sel:.1%} of renamable", flush=True)
-    print(f"per tier: {dict(per_tier)}", flush=True)
+    print(f"per scenario family: {dict(per_family)}", flush=True)
     print(f"per new name: {dict(per_name)}", flush=True)
 
 

@@ -45,7 +45,7 @@ def serialize_task(task: dict, xml: str) -> dict:
     stations = sorted(f[1] for f in task["domain_obj"].static_facts
                       if f[0] == "charge_station_at")
     return {
-        "domain": task["domain"], "tier": task["tier"], "scenario": task["scenario"],
+        "domain": task["domain"], "scenario": task["scenario"],
         "robots": task["robots"], "items": task["items"],
         "init_dynamic": [list(f) for f in task["init_dynamic"]],
         "goal": [list(f) for f in task["goal"]],

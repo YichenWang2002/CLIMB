@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import json
 import math
 import re
@@ -27,9 +28,9 @@ import numpy as np
 import torch
 
 from curriculum.structural import structural_features
-from experiments.bt_ducl.common import apply_chat_template_compat
+from common.data import apply_chat_template_compat
 
-BASE = "models/llama32-1b"
+BASE = os.environ.get("CLIMB_BASE_MODEL", "meta-llama/Llama-3.2-1B-Instruct")
 ENCODER = "models/all-MiniLM-L12-v2"
 OPENING_TAG = re.compile(r"<(?![/!?])[^>]+>")
 

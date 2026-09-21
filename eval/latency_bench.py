@@ -5,8 +5,8 @@ Two measurement modes, both real wall-clock on this machine:
 
   * bs=1  -- single-request latency (deployment semantics; comparable to the
              per-request API latencies). Run on a tier-stratified subset
-             (--per-tier N) to bound wall time; the subset is the first N
-             tasks of each tier in test.jsonl file order (deterministic).
+             (--per-scenario N) to bound wall time; the subset is the first N
+             tasks of each scenario family in test.jsonl order (deterministic).
   * bs=B>1 -- batched amortized latency (batch wall-clock / batch size),
              the protocol of the frozen evals (batch_size=64); run on the
              full 600-task split to cross-check the recorded 0.839 s.
@@ -40,7 +40,7 @@ import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.
 from datagen.executor import execute
 from eval.evaluate import reconstruct_task, load_jsonl
 from eval.eval_constrained import ConstrainedState, PlatformMap, _Proc
-from experiments.bt_ducl.common import record_id, apply_chat_template_compat
+from common.data import record_id, apply_chat_template_compat
 
 
 def load_model(base, adapter):
@@ -60,17 +60,22 @@ def load_model(base, adapter):
     return model, tok
 
 
-def stratify(recs, per_tier):
-    """First `per_tier` tasks of each tier, in file order (deterministic)."""
-    if per_tier <= 0:
+def scenario_group(meta):
+    return ("relay" if str(meta.get("scenario", "")).startswith("relay")
+            else "joint-heavy")
+
+
+def stratify(recs, per_scenario):
+    """First `per_scenario` tasks of each scenario family, in file order."""
+    if per_scenario <= 0:
         return list(recs)
     counts = defaultdict(int)
     out = []
     for r in recs:
-        t = r["meta"]["tier"]
-        if counts[t] < per_tier:
+        g = scenario_group(r["meta"])
+        if counts[g] < per_scenario:
             out.append(r)
-            counts[t] += 1
+            counts[g] += 1
     return out
 
 

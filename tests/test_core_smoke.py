@@ -67,7 +67,7 @@ check("357 faulted missions", faulted == 357, str(faulted))
 check("no tier labels in any split",
       tier_leaks == 0 and all(
           "tier" not in json.loads((ROOT / f"data/{s}.jsonl").read_text().splitlines()[0])["meta"]
-          for s in ("train", "train_aug10", "val")))
+          for s in ("train", "val")))
 
 print("[2] curriculum: SPCL scoring math + structural difficulty")
 import numpy as np

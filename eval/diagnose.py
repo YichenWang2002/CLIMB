@@ -172,7 +172,7 @@ def main():
     assert len(gens) == len(recs) == len(details)
 
     out, stats = [], Counter()
-    tier_stats = defaultdict(Counter)
+    scen_stats = defaultdict(Counter)
     n_succ = 0
     for rec, g, det in zip(recs, gens, details):
         task = reconstruct_task(rec["meta"])
@@ -187,14 +187,14 @@ def main():
             n_succ += 1
             continue
         etype = classify(task, g, res, ex) if ex else classify(task, g, res, DummyEx())
-        tier = rec["meta"].get("tier", "?")
+        scen = rec["meta"].get("scenario", "?")
         stats[etype] += 1
-        tier_stats[tier][etype] += 1
+        scen_stats[scen][etype] += 1
         n_fail = sum(1 for e in (ex.trace if ex else []) if e["result"] == "FAILURE")
         n_ok = sum(1 for e in (ex.trace if ex else []) if e["result"] == "SUCCESS")
         fev = next((e for e in (ex.trace if ex else []) if e["result"] == "FAILURE"), None)
         diag = {
-            "id": det.get("id"), "tier": tier, "domain": rec["meta"].get("domain"),
+            "id": det.get("id"), "scenario": scen, "domain": rec["meta"].get("domain"),
             "reason": res["reason"], "error_type": etype,
             "executed_actions": n_ok, "failed_actions": n_fail,
             "first_failed_node": fev, 
@@ -206,14 +206,14 @@ def main():
     Path(a.out).write_text(json.dumps({
         "source": a.eval_json, "n": len(recs), "n_success": n_succ, "n_fail": len(out),
         "error_type_counts": dict(stats.most_common()),
-        "error_type_by_tier": {t: dict(c.most_common()) for t, c in tier_stats.items()},
+        "error_type_by_scenario": {s: dict(c.most_common()) for s, c in scen_stats.items()},
         "diagnoses": out,
     }, ensure_ascii=False, indent=1))
     print(f"success {n_succ}/{len(recs)}  fail {len(out)}")
     for k, v in stats.most_common():
         print(f"  {k:32s} {v:4d}  {v/len(out)*100:.1f}%")
-    for t, c in tier_stats.items():
-        print(f"[{t}]", dict(c.most_common()))
+    for s, c in scen_stats.items():
+        print(f"[{s}]", dict(c.most_common()))
 
 
 class DummyEx:

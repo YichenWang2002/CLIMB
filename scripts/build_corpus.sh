@@ -1,15 +1,11 @@
 #!/bin/bash
-# Full corpus construction from scratch: STRIPS sample -> plan -> BT compile
-# -> executor validation -> NL rewriting (needs LLM API key) -> splits,
-# then the primitive-renaming augmentation used for all paper training runs.
+# Corpus construction: STRIPS sample -> forward-search plan -> BT compile ->
+# executor validation -> natural-language rewriting -> splits.
+# The NL step calls an OpenAI-compatible API (set OPENAI_API_KEY / OPENAI_BASE_URL).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-mkdir -p data
 
-echo "=== [1/2] sample + validate + NL-rewrite the three splits ==="
 python -m datagen.build_dataset --full --workers 16
-
-echo "=== [2/2] primitive-renaming augmentation (train_aug10) ==="
 python -m datagen.rename_skills \
-  --train data/train.jsonl --out data/train_aug10.jsonl \
-  --frac 0.10 --seed 123 --workers 16 --include-faulted --double-frac 0.2
+  --train data/train.jsonl --out data/train_aug.jsonl \
+  --frac 0.10 --seed 123 --include-faulted --double-frac 0.2

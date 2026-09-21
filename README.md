@@ -1,100 +1,101 @@
-# CLIMB
+# CLIMB: Curriculum Learning for Multi-Agent Behavior Tree Generation with Small Language Models (ICASSP 2027 under review)
 
-**CLIMB: Curriculum Learning for Multi-Agent Behavior Tree Generation with Small Language Models** (ICASSP 2027)
+<div align="center">
+  <img src="docs/assets/compass-overview.png" alt="CLIMB overview" width="100%">
+</div>
 
-[Paper] · [GitHub](https://github.com/YichenWang2002/CLIMB) · [Project page](https://yichenwang2002.github.io/CLIMB/) · [Dataset](data/)
+**🌍 Project page:** [yichenwang2002.github.io/CLIMB](https://yichenwang2002.github.io/CLIMB/)
 
-Given a natural-language mission (including a spoken platform map) for a
-heterogeneous multi-robot team, CLIMB generates an executable
-BehaviorTree.CPP v4 XML that a shared symbolic executor accepts. This
-repository releases the benchmark, the training/evaluation code, the MRBTP
-symbolic-planner baseline, and the ROS 2 demo pack.
+CLIMB turns a 1B-parameter language model into a reliable generator of
+**executable** BehaviorTree.CPP v4 trees for 2–3 robot teams, by grounding all
+three stages in symbolic planning:
+
+- **Supervision** — a planner-grounded corpus: missions are sampled from a
+  STRIPS domain, solved by forward search, compiled to behavior trees, and
+  kept only if a symbolic executor reaches every mission goal with faults
+  active;
+- **SPCL** (Structure-Paced Curriculum Learning, training) — examples are
+  ordered and weighted by a two-view difficulty score (semantic surprise ⊕
+  structural complexity) with validation-referenced utility controlling
+  bucket exposure;
+- **SCD** (Symbolic Constrained Decoding, inference) — decoding masks
+  identifiers and transitions that violate the platform map, at zero extra
+  token cost.
+
+The primary metric is **execution success**: a generated tree counts only if
+it parses, ticks to `SUCCESS`, and reaches all mission goals.
 
 ## Repository layout
 
 ```
-datagen/              benchmark generator: STRIPS domains (strips/), sampler,
-                      NL mission renderer, gold BT compiler, and the shared
-                      symbolic executor (executor.py)  <-- scoring oracle
-curriculum/           SPCL: stage construction + difficulty/utility scoring
-training/             LoRA SFT / DPO entry points
-eval/                 evaluate.py (greedy pass@1), eval_constrained.py (SCD),
-                      egvd.py (pass@k), paired_compare.py (McNemar/bootstrap)
-baselines_mrbtp/      MRBTP (AAAI'25) adapter, faithful bridge  (see its README)
-baselines_prompted/   hosted-LLM 1-/5-shot evaluation            (see its README)
-ros2_demo/            ROS 2 / Gazebo execution demo pack         (see its README)
-scripts/              reproduction shell scripts for reported tables
-data/                 train/val/test splits + prompted-baseline prompt files
-results/              per-task JSON outputs behind the paper tables
-docs/                 project page source
+CLIMB/
+│
+├── data/                      # benchmark: executor-verified mission–tree pairs
+│   ├── train.jsonl            #   6,000 training missions (4 seen domains)
+│   ├── val.jsonl              #     600 validation missions
+│   ├── test.jsonl             #   480 held-out multi-agent missions (2 unseen domains)
+│   └── README.md              #   format, statistics, checksums
+│
+├── datagen/                   # corpus construction (how data/ was built)
+│   ├── strips/                #   STRIPS domains, forward-search planner, task sampler
+│   ├── executor.py            #   symbolic executor (the frozen judge for everything)
+│   ├── build_dataset.py       #   sample → plan → compile → validate → rewrite NL
+│   ├── rename_skills.py       #   primitive-renaming augmentation
+│   └── nl_gen.py, names.py    #   natural-language mission rewriting
+│
+├── curriculum/                # SPCL (training-side contribution)
+│   ├── score_mt_ducl.py       #   two-view difficulty + validation-referenced utility
+│   ├── build_spcl.py          #   bucketing, expanding windows, paced sampling
+│   └── structural.py          #   tree-structural features
+│
+├── training/                  # LoRA supervised fine-tuning
+│   └── sft_lora.py            #   flat (baseline) and staged (SPCL) modes
+│
+├── eval/                      # evaluation
+│   ├── evaluate.py            #   symbolic-execution success rate
+│   ├── eval_constrained.py    #   SCD constrained decoding
+│   ├── diagnose.py            #   failure-reason analysis
+│   └── paired_test.py         #   exact McNemar paired significance
+│
+├── common/                    # shared helpers (data formats, API wrapper)
+├── scripts/                   # minimal entry scripts (see below)
+├── docs/                      # project page (GitHub Pages) + paper PDF
+└── tests/                     # CPU-only smoke tests
 ```
 
-## Setup
+## Usage
+
+This repository is a **reference framework**: the complete pipeline is
+included, but exact hyperparameters (curriculum schedule, learning rate, LoRA
+configuration) are withheld at the current stage — the entry scripts mark
+every place where you need to plug in your own values.
 
 ```bash
-conda create -n climb python=3.10 && conda activate climb
 pip install -r requirements.txt
-# base models under models/: Llama-3.2-1B-Instruct, DeepSeek-R1-Distill-Qwen-1.5B
+python tests/test_core_smoke.py     # CPU-only sanity check, no GPU needed
+
+# 1. flat SFT baseline
+bash scripts/run_flat.sh
+
+# 2. SPCL curriculum + staged training
+bash scripts/run_spcl.sh
+
+# 3. evaluate (execution success) and SCD constrained decoding
+bash scripts/run_eval.sh  outputs/checkpoints/spcl_s42/stage3 spcl_s42
+bash scripts/run_scd.sh   outputs/checkpoints/spcl_s42/stage3 spcl_s42_scd
 ```
+
+Backbones are pulled from the Hugging Face Hub, or pointed at local snapshots
+via `CLIMB_BASE_MODEL` / `CLIMB_ENCODER`. Everything runs on a single 24 GB
+GPU.
 
 ## Dataset
 
-`data/test.jsonl` — 600 rows; the paper's suite is the 480 rows with
-`meta.tier ∈ {T2, T3}` (two/three agents; library + greenhouse domains,
-unseen in training). Training: `data/train_aug10.jsonl`; supervision
-ablations: `train_llmteacher.jsonl`, `train_planner_matched.jsonl`.
-Each row:
-
-```json
-{"instruction": "...system prompt...",
- "input":       "natural-language mission incl. platform map",
- "output":      "gold BTCPP v4 XML",
- "meta":        {"domain","tier","scenario","robots","items","init_dynamic",
-                 "goal","faults","connected","can_reach","charge_stations",
-                 "plan","plan_len","n_agents"}}
-```
-
-`meta` is the formal task representation consumed by the MRBTP baseline;
-neither the reference plan nor the target tree is ever exposed to a baseline
-(verified by `tests/test_mrbtp_faithful_bridge.py`). Regenerate with
-`python -m datagen.build_dataset`. `data/` is ~130 MB — use git-lfs or
-GitHub Releases when publishing.
-
-## Reproducing the paper
-
-```bash
-# CLIMB (Table: numerical simulation) — train then evaluate
-bash scripts/run_spcl_v2_multiseed.sh
-PYTHONHASHSEED=0 python -m eval.eval_constrained \
-    --data data/test.jsonl --adapter outputs/checkpoints/<run> \
-    --out results/spcl_v2_constrained_test.json
-
-# MRBTP baseline (faithful protocol; deterministic = single process + seed 0)
-git clone https://github.com/DIDS-EI/MRBTP && pip install -e MRBTP
-export MRBTP_ROOT=/absolute/path/to/MRBTP
-PYTHONHASHSEED=0 python baselines_mrbtp/run_mrbtp.py \
-    --workers 1 --timeout 20.0 --out results/mrbtp_faithful_480.json
-
-# paired significance tests between any two result files
-python -m eval.paired_compare results/A.json results/B.json
-```
-
-MRBTP protocol: official MABTP search (optional LLM subtree plugin disabled),
-oracle nominal formalization from `meta` (no faults, no reference plan), and
-the generated reactive per-robot trees are executed natively by the shared
-executor. Environment and file hashes: `results/mrbtp_official_manifest.json`.
-
-## License & citation
-
-MIT (see `LICENSE`).
-
-```bibtex
-@inproceedings{climb2027,
-  title     = {CLIMB: Curriculum Learning for Multi-Agent Behavior Tree
-               Generation with Small Language Models},
-  author    = {Wang, Yichen and Cai, Zhongxuan and Liu, Yinuo and Wang, Yuhao
-               and Jiang, Tianjian and Peng, Yuanxi},
-  booktitle = {Proc. IEEE Int. Conf. Acoustics, Speech and Signal Processing (ICASSP)},
-  year      = {2027}
-}
-```
+`data/` contains the executor-verified benchmark used in the paper:
+**6,000** training missions (4 seen domains), **600** validation missions,
+and a **480-task** held-out multi-agent suite in two unseen domains
+(library, greenhouse) — 320 relay-transport + 160 joint-heavy-transport
+missions, 357 of them with injected recoverable faults. A generated tree
+counts as successful only if the shared symbolic executor reaches every
+mission goal. See [`data/README.md`](data/README.md) for the record format,
+statistics, and checksums.

@@ -24,7 +24,7 @@ def compare_results(flat: dict, method: dict, bootstrap_samples: int = 100_000,
     method_details = method.get("details", [])
     if len(flat_details) != len(method_details) or not flat_details:
         raise ValueError("results must contain aligned non-empty details")
-    identity_fields = ("domain", "tier", "scenario")
+    identity_fields = ("domain", "scenario")
     for index, (left, right) in enumerate(zip(flat_details, method_details)):
         if bool(left.get("record_id")) != bool(right.get("record_id")):
             raise ValueError("only one result contains stable record IDs")

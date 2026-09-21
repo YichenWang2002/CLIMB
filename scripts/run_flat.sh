@@ -1,18 +1,19 @@
 #!/bin/bash
-# Flat SFT baseline (BTBase): 3 epochs, shuffled sampling, LoRA r16/a32.
-# Usage: bash scripts/run_flat.sh [SEED]
+# Flat supervised fine-tuning baseline (BTGenBot-MA style).
+# Learning rate / LoRA configuration are intentionally left to the user.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=8
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-
-SEED="${1:-42}"
+: "${CLIMB_LR:?export CLIMB_LR (learning rate; withheld in this release)}"
+: "${CLIMB_LORA_R:?export CLIMB_LORA_R}"
+: "${CLIMB_LORA_ALPHA:?export CLIMB_LORA_ALPHA}"
 
 python -u -m training.sft_lora --mode flat \
-  --stages data/train_aug10.jsonl \
+  --stages data/train.jsonl \
   --val data/val.jsonl \
-  --run-name "btgenbot_ma_s${SEED}" --epochs 3 --lr 1e-4 --seed "${SEED}"
+  --run-name "btbase_s${SEED:-42}" --epochs 3 --lr "$CLIMB_LR" \
+  --lora-r "$CLIMB_LORA_R" --lora-alpha "$CLIMB_LORA_ALPHA" \
+  --seed "${SEED:-42}"
 
 python -u -m eval.evaluate --data data/test.jsonl \
-  --adapter "outputs/checkpoints/btgenbot_ma_s${SEED}/stage1" \
-  --out "results/btgenbot_ma_s${SEED}.json" --batch-size 64 --save-generations
+  --adapter "outputs/checkpoints/btbase_s${SEED:-42}/stage1" \
+  --out "outputs/results/btbase_s${SEED:-42}.json" --batch-size 64 --save-generations

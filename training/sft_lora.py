@@ -30,9 +30,9 @@ from torch.utils.data import SequentialSampler
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from transformers import TrainerCallback
 from trl import SFTConfig, SFTTrainer
-from experiments.bt_ducl.common import apply_chat_template_compat
+from common.data import apply_chat_template_compat
 
-BASE = "models/llama32-1b"
+BASE = os.environ.get("CLIMB_BASE_MODEL", "meta-llama/Llama-3.2-1B-Instruct")
 CKPT_ROOT = Path(__file__).resolve().parents[1] / "outputs" / "checkpoints"
 
 
@@ -70,107 +70,6 @@ def load_jsonl(path: str) -> list:
     return [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()]
 
 
-def _canon(n: str) -> str:
-    """Canonical parameter key: strip PEFT wrapper prefixes so that names are
-    stable across construction paths (fresh LoRA via peft_config vs
-    PeftModel.from_pretrained). Without this, fisher/anchor lookups silently
-    miss and the EWC penalty silently degrades to zero."""
-    i = n.find("model.layers.")
-    return n[i:] if i >= 0 else n
-
-
-class EWCTrainer(SFTTrainer):
-    """SFTTrainer + Elastic Weight Consolidation penalty.
-
-    ewc_state = {"fisher": {canon(name): tensor(cpu), mean-normalised},
-                 "anchor":  {canon(name): tensor(cpu), params after previous stage}}
-    Penalty: (lambda/2) * sum_i F_i (theta_i - anchor_i)^2 over trainable
-    (LoRA) parameters only."""
-
-    def __init__(self, *args, ewc_state=None, ewc_lambda=0.0, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ewc_state = ewc_state or {}
-        self.ewc_lambda = ewc_lambda
-        self._ewc_checked = False
-
-    def compute_loss(self, model, inputs, return_outputs=False,
-                     num_items_in_batch=None):
-        loss, outputs = super().compute_loss(
-            model, inputs, return_outputs=True,
-            num_items_in_batch=num_items_in_batch)
-        if self.ewc_lambda > 0 and self.ewc_state.get("fisher"):
-            device = loss.device
-            penalty = torch.zeros((), device=device)
-            anchor = self.ewc_state["anchor"]
-            matched = 0
-            for n, p in model.named_parameters():
-                f = self.ewc_state["fisher"].get(_canon(n))
-                if f is not None:
-                    penalty = penalty + (f.to(device) * (p - anchor[_canon(n)].to(device)) ** 2).sum()
-                    matched += 1
-            if not self._ewc_checked:
-                self._ewc_checked = True
-                total = sum(1 for _, p in model.named_parameters() if p.requires_grad)
-                print(f"[EWC] penalty active on {matched}/{total} trainable params",
-                      flush=True)
-                if matched == 0:
-                    raise RuntimeError("EWC penalty matched 0 params -- name "
-                                       "mismatch; refusing to train a silently "
-                                       "naive model")
-            loss = loss + 0.5 * self.ewc_lambda * penalty
-        return (loss, outputs) if return_outputs else loss
-
-
-def compute_fisher(model, tokenizer, records, n_batches, batch_size, max_len,
-                   seed=0):
-    """Diagonal Fisher information of the task loss over trainable (LoRA)
-    params, estimated on n_batches of the stage's data. Mean-normalised so
-    ewc_lambda is comparable across stages and runs."""
-    import random as _rnd
-    device = model.device
-    fisher = {n: torch.zeros(p.shape) for n, p in model.named_parameters()
-              if p.requires_grad}
-    if not fisher:
-        return fisher
-    rng = _rnd.Random(seed)
-    take = min(n_batches * batch_size, len(records))
-    idxs = rng.sample(range(len(records)), take)
-    done = 0
-    for i in range(0, len(idxs), batch_size):
-        chunk = [records[j] for j in idxs[i:i + batch_size]]
-        prompts, fulls = [], []
-        for r in chunk:
-            msgs = [{"role": "system", "content": r["instruction"]},
-                    {"role": "user", "content": r["input"]}]
-            p = apply_chat_template_compat(tokenizer, msgs, add_generation_prompt=True)
-            prompts.append(p)
-            fulls.append(p + r["output"] + tokenizer.eos_token)
-        enc = tokenizer(fulls, return_tensors="pt", padding=True,
-                        truncation=True, max_length=max_len).to(device)
-        labels = enc["input_ids"].clone()
-        for j, p in enumerate(prompts):
-            plen = len(tokenizer(p, truncation=True, max_length=max_len)["input_ids"])
-            labels[j, :plen] = -100
-        labels[enc["attention_mask"] == 0] = -100
-        model.zero_grad(set_to_none=True)
-        model(**enc, labels=labels).loss.backward()
-        for n, p_ in model.named_parameters():
-            if p_.requires_grad and p_.grad is not None:
-                fisher[n] += (p_.grad.detach() ** 2).cpu()
-        done += 1
-        if done >= n_batches:
-            break
-    for n in fisher:
-        fisher[n] /= max(done, 1)
-    flat = torch.cat([v.flatten() for v in fisher.values()])
-    m = flat.mean()
-    if m > 0:
-        for n in fisher:
-            fisher[n] /= m
-    model.zero_grad(set_to_none=True)
-    return fisher
-
-
 def to_prompt_completion(records: list, tokenizer) -> Dataset:
     rows = []
     for r in records:
@@ -185,8 +84,7 @@ def to_prompt_completion(records: list, tokenizer) -> Dataset:
 
 def train_one_stage(model, tokenizer, train_ds, eval_ds, out_dir,
                     epochs, lr, batch, accum, max_len, seed, peft_config=None,
-                    save_epochs=False, ewc_state=None, ewc_lambda=0.0,
-                    preserve_order=False, loss_type="chunked_nll"):
+                    save_epochs=False, preserve_order=False, loss_type="chunked_nll"):
     cfg = SFTConfig(
         output_dir=str(out_dir),
         num_train_epochs=epochs,
@@ -213,8 +111,8 @@ def train_one_stage(model, tokenizer, train_ds, eval_ds, out_dir,
     if save_epochs:
         cb = SaveEachEpoch(out_dir)
         callbacks.append(cb)
-    trainer_cls = OrderedSFTTrainer if preserve_order else EWCTrainer
-    trainer_kwargs = dict(
+    trainer_cls = OrderedSFTTrainer if preserve_order else SFTTrainer
+    trainer = trainer_cls(
         model=model,
         args=cfg,
         train_dataset=train_ds,
@@ -223,9 +121,6 @@ def train_one_stage(model, tokenizer, train_ds, eval_ds, out_dir,
         processing_class=tokenizer,
         callbacks=callbacks,
     )
-    if not preserve_order:
-        trainer_kwargs.update(ewc_state=ewc_state, ewc_lambda=ewc_lambda)
-    trainer = trainer_cls(**trainer_kwargs)
     if save_epochs:
         cb.trainer = trainer
     trainer.train()
@@ -245,14 +140,16 @@ def main():
                     help="base causal LM identifier or local snapshot")
     ap.add_argument("--checkpoint-root", default=str(CKPT_ROOT),
                     help="root directory for adapters; isolates revision runs")
-    ap.add_argument("--epochs", type=str, default="3",
+    ap.add_argument("--epochs", type=str, default="1",
                     help="single value or comma list per stage, e.g. '3,3,3,1'")
-    ap.add_argument("--lr", type=str, default="1e-4",
-                    help="single value or comma list per stage, e.g. '1e-4,1e-4,1e-4,5e-5'")
+    ap.add_argument("--lr", type=str, required=True,
+                    help="learning rate (set your own; withheld in this release)")
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--accum", type=int, default=4)
-    ap.add_argument("--lora-r", type=int, default=16)
-    ap.add_argument("--lora-alpha", type=int, default=32)
+    ap.add_argument("--lora-r", type=int, required=True,
+                    help="LoRA rank (withheld in this release)")
+    ap.add_argument("--lora-alpha", type=int, required=True,
+                    help="LoRA alpha (withheld in this release)")
     ap.add_argument("--max-len", type=int, default=2560)
     ap.add_argument("--loss-type", choices=("nll", "chunked_nll"),
                     default="chunked_nll",
@@ -266,12 +163,6 @@ def main():
                          "<run>/stage{i}/epoch{N} (for learning curves)")
     ap.add_argument("--preserve-order", action="store_true",
                     help="use SequentialSampler so the input JSONL order is trained")
-    ap.add_argument("--ewc-lambda", type=float, default=0.0,
-                    help="EWC penalty strength (0 = disabled). Fisher is "
-                         "mean-normalised, so lambda is comparable across runs")
-    ap.add_argument("--ewc-fisher-batches", type=int, default=200,
-                    help="batches used to estimate the diagonal Fisher after "
-                         "each stage")
     args = ap.parse_args()
 
     n_stages = len(args.stages)
@@ -303,7 +194,6 @@ def main():
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     )
     prev_adapter = args.init_adapter
-    ewc_state = {"fisher": None, "anchor": None}
     for si, stage_file in enumerate(args.stages, 1):
         print(f"=== stage {si}: {stage_file} (continue_from={prev_adapter}) ===", flush=True)
         base = AutoModelForCausalLM.from_pretrained(
@@ -323,24 +213,10 @@ def main():
                                   args.batch, args.accum,
                                   args.max_len, args.seed + si, peft_config=stage_peft,
                                   save_epochs=args.save_epochs,
-                                  ewc_state=ewc_state, ewc_lambda=args.ewc_lambda,
                                   preserve_order=args.preserve_order,
                                   loss_type=args.loss_type)
         all_metrics[f"stage{si}"] = {"n_train": len(train_records), **metrics}
         print(f"stage {si} metrics: {metrics}", flush=True)
-        if args.ewc_lambda > 0:
-            print(f"[EWC] computing Fisher after stage {si} ...", flush=True)
-            new_fisher = compute_fisher(model, tokenizer, train_records,
-                                        args.ewc_fisher_batches, args.batch,
-                                        args.max_len, seed=args.seed + si)
-            if ewc_state["fisher"] is None:
-                ewc_state["fisher"] = new_fisher
-            else:
-                for n in ewc_state["fisher"]:
-                    ewc_state["fisher"][n] += new_fisher[n]
-            ewc_state["anchor"] = {n: p.detach().clone().cpu()
-                                   for n, p in model.named_parameters()
-                                   if p.requires_grad}
         prev_adapter = str(stage_dir)
         del model, base
         torch.cuda.empty_cache()
