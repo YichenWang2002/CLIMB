@@ -186,72 +186,9 @@
   <p>One training instance. The <em>instruction</em> is a fixed system prompt shared by the whole
   dataset; the <em>input</em> is the natural-language mission given to the model; the <em>output</em>
   is the gold, executor-validated behavior tree the model must emit.</p>
-  <div class="sample-item">
-    <div class="s-head"><span class="s-badge s-b1">Instruction</span><span class="s-note">shared system prompt &middot; identical for every record</span></div>
-    <div class="mission-box s-instr">You are a helpful assistant that creates behavior trees for multi-robot teams.
-Your task:
-- Convert the provided natural-language mission description into an XML-formatted multi-agent behavior tree.
-- The behavior tree must be compatible with the BehaviorTree.CPP library (&lt;root BTCPP_format=&quot;4&quot;&gt;), with one &lt;BehaviorTree&gt; per robot coordinated by a main tree.
-- Use Fallback nodes to recover from the failures mentioned in the mission.
-- Use SignalReady/WaitReady and the Handover/Co* joint nodes for inter-robot coordination.
-
-Output Requirements:
-- Output only the XML representation of the behavior tree. Do not include explanations, comments, or any additional text.
-- Every robot mentioned in the mission must have its own &lt;BehaviorTree ID=&quot;Agent_&lt;name&gt;&quot;&gt;.</div>
+  <div class="content has-text-centered">
+    <img src="static/images/sample_record.png" alt="Sample record: instruction, input and gold behavior-tree output" style="max-width:92%;border:1px solid var(--line);border-radius:10px">
   </div>
-  <div class="sample-item">
-    <div class="s-head"><span class="s-badge s-b2">Input</span><span class="s-note">natural-language mission given to the model</span></div>
-    <div class="mission-box">Alpha (id alpha) and Beta (id beta) are a two-robot team stationed at shelf B (shelf_b). Their task: retrieve the blue crate (crate_blue) from shelf C (shelf_c) and deliver it to the charging bay (charge_bay). Alpha is cleared to work only on shelf C and shelf B; Beta is cleared to work only on shelf B and the charging bay. The handover of the blue crate between them may fumble on the first attempt, so they should be ready to try again.
-
-The warehouse layout connects the charging bay to shelf B, shelf B to shelf A (shelf_a) and shelf C, shelf A to the loading dock (loading_dock) and the packing station (packing_station), and the loading dock and packing station to each other. The charging bay is the only charging station.</div>
-  </div>
-  <div class="sample-item">
-    <div class="s-head"><span class="s-badge s-b3">Output</span><span class="s-note">gold behavior tree &mdash; executor-validated XML</span></div>
-    <pre class="sample-pre" id="sample-xml">&lt;?xml version="1.0" ?&gt;
-&lt;root BTCPP_format="4" main_tree_to_execute="MainTree"&gt;
-    &lt;BehaviorTree ID="MainTree"&gt;
-        &lt;Parallel success_threshold="2" failure_threshold="1"&gt;
-            &lt;SubTree ID="Agent_alpha"/&gt;
-            &lt;SubTree ID="Agent_beta"/&gt;
-        &lt;/Parallel&gt;
-    &lt;/BehaviorTree&gt;
-    &lt;BehaviorTree ID="Agent_alpha"&gt;
-        &lt;Sequence&gt;
-            &lt;MoveTo robot="alpha" from="shelf_b" to="shelf_c"/&gt;
-            &lt;Sequence&gt;
-                &lt;IsAtLocation robot="alpha" location="shelf_c"/&gt;
-                &lt;IsItemAt item="crate_blue" location="shelf_c"/&gt;
-                &lt;PickUp robot="alpha" item="crate_blue" location="shelf_c"/&gt;
-            &lt;/Sequence&gt;
-            &lt;MoveTo robot="alpha" from="shelf_c" to="shelf_b"/&gt;
-            &lt;Sequence&gt;
-                &lt;IsAtLocation robot="alpha" location="shelf_b"/&gt;
-                &lt;SignalReady robot="alpha" item="crate_blue" to="beta"/&gt;
-                &lt;Fallback&gt;
-                    &lt;HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/&gt;
-                    &lt;HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/&gt;
-                &lt;/Fallback&gt;
-            &lt;/Sequence&gt;
-        &lt;/Sequence&gt;
-    &lt;/BehaviorTree&gt;
-    &lt;BehaviorTree ID="Agent_beta"&gt;
-        &lt;Sequence&gt;
-            &lt;Sequence&gt;
-                &lt;WaitReady robot="beta" item="crate_blue" from="alpha"/&gt;
-                &lt;Fallback&gt;
-                    &lt;HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/&gt;
-                    &lt;HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/&gt;
-                &lt;/Fallback&gt;
-            &lt;/Sequence&gt;
-            &lt;MoveTo robot="beta" from="shelf_b" to="charge_bay"/&gt;
-            &lt;Sequence&gt;
-                &lt;IsCarrying robot="beta" item="crate_blue"/&gt;
-                &lt;PlaceDown robot="beta" item="crate_blue" location="charge_bay"/&gt;
-            &lt;/Sequence&gt;
-        &lt;/Sequence&gt;
-    &lt;/BehaviorTree&gt;
-&lt;/root&gt;
-</pre>
     &lt;BehaviorTree ID="MainTree"&gt;
         &lt;Parallel success_threshold="2" failure_threshold="1"&gt;
             &lt;SubTree ID="Agent_alpha"/&gt;
