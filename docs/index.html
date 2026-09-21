@@ -7,30 +7,64 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-  .hero-body { padding-top: 4rem; padding-bottom: 3rem; }
-  .publication-title { font-weight: 600; }
-  .link-block { margin-right: .5rem; }
-  .external-link { height: 2.5em; }
-  .content img { border-radius: 8px; }
-  .mission-box { background: #f6f7f9; border-left: 4px solid #6baed6; padding: .9em 1.2em;
-                 font-size: .92rem; border-radius: 4px; white-space: pre-wrap; }
-  table.results th, table.results td { text-align: center; padding: .35em .8em; }
+  :root {
+    --ink: #22313a; --soft: #5b6b74; --line: #dfe9e7;
+    --teal: #0e7c6b; --teal-dark: #0a5f52; --teal-soft: #e2f3ef;
+    --paper: #ffffff; --alt: #f4f8f7;
+  }
+  body { color: var(--ink); background: var(--paper);
+         font-family: 'Noto Sans', 'Segoe UI', Helvetica, Arial, sans-serif; }
+  a { color: var(--teal); }
+
+  .site-hero { background: linear-gradient(135deg, #122f3a 0%, #17403f 55%, #0d5a4b 100%);
+               color: #fff; padding: 62px 0 54px; }
+  .site-hero .publication-title { color: #fff; font-weight: 700; letter-spacing: .04em; }
+  .site-hero .subtitle { color: #cfe6e0; font-weight: 400; }
+  .site-hero .publication-authors { color: #eaf4f1; }
+  .site-hero .tag-paper { display: inline-block; margin-bottom: 18px; padding: 4px 14px;
+      border: 1px solid #6fd0c0; border-radius: 999px; color: #9adccd;
+      font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
+  .site-hero .button { background: transparent; border: 1.5px solid #6fd0c0;
+      color: #eafffa; border-radius: 999px; }
+  .site-hero .button:hover { background: #6fd0c0; color: #12303b; border-color: #6fd0c0; }
+  .site-hero .button strong { color: inherit; }
+
+  section.section { padding: 54px 0; }
+  .kicker { color: var(--teal); font-weight: 700; letter-spacing: .16em;
+            text-transform: uppercase; font-size: .78rem; margin-bottom: 4px; }
+  h2.title.is-3 { font-size: 1.5rem; display: flex; align-items: center; gap: 14px; }
+  h2.title.is-3::before { content: ""; width: 7px; height: 30px; border-radius: 4px;
+      background: linear-gradient(180deg, #14a08d, #0a5f52); }
+  .band-alt { background: var(--alt); }
+
+  .card { border: none; border-radius: 12px; box-shadow: 0 4px 18px rgba(18,48,59,.09); }
+  .content img { border-radius: 10px; }
+  .mission-box { background: #f2f7f6; border-left: 4px solid var(--teal);
+                 border-radius: 6px; font-size: .92rem; white-space: pre-wrap; }
+  details summary { cursor: pointer; color: var(--teal); }
+
+  table.results th, table.results td { text-align: center; padding: .38em .8em; }
   table.results td:first-child, table.results th:first-child { text-align: left; }
-  .ours-row { background: #eef7ee; font-weight: 600; }
-  h2.title { font-weight: 600; }
+  table.results thead th { background: #12303b; color: #fff; border-color: #12303b !important; }
+  table.results td { border-color: #d7e2e0 !important; }
+  .ours-row { background: var(--teal-soft) !important; font-weight: 600; }
+
+  footer.site-footer { background: #12303b; color: #b9cdc9; padding: 26px 0 34px; }
+  footer.site-footer a { color: #9adccd; }
 </style>
 </head>
 <body>
 
-<section class="hero">
+<section class="hero site-hero">
   <div class="hero-body"><div class="container is-max-widescreen">
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
+        <p class="tag-paper">ICASSP &middot; Code &amp; Benchmark</p>
         <h1 class="title is-1 publication-title">CLIMB</h1>
         <h2 class="subtitle is-4"><strong>C</strong>urriculum <strong>L</strong>earn<strong>i</strong>ng for Mult<strong>i</strong>-agent <strong>B</strong>ehavior Tree Generation with Small Language Models</h2>
         <div class="is-size-5 publication-authors">
           <span class="author-block">Yichen Wang<sup>1</sup>,</span>
-          <span class="author-block"><strong>Zhongxuan Cai<sup>1,*</sup></strong></span>,
+          <span class="author-block">Zhongxuan Cai<sup>1,*</sup></span>,
           <span class="author-block">Yinuo Liu<sup>1</sup>,</span>
           <span class="author-block">Yuhao Wang<sup>1</sup>,</span>
           <span class="author-block">Tianjian Jiang<sup>1</sup>,</span>
@@ -53,7 +87,8 @@
 </section>
 
 <section class="section"><div class="container is-max-desktop">
-  <h2 class="title is-3">Abstract</h2>
+  <p class="kicker">00 &middot; Abstract</p>
+    <h2 class="title is-3">Abstract</h2>
   <div class="content has-text-justified">
     <p>Behavior trees have become a popular approach for modeling robot behaviors through recursive tick
     signals, but their automated construction remains challenging. Recent work explores using large language
@@ -74,8 +109,9 @@
   </div>
 </div></section>
 
-<section class="section hero is-light"><div class="container is-max-desktop">
-  <h2 class="title is-3">Method Overview</h2>
+<section class="section hero is-light" band-alt><div class="container is-max-desktop">
+  <p class="kicker">01 &middot; Method</p>
+    <h2 class="title is-3">Method Overview</h2>
   <div class="content has-text-centered"><img src="static/images/overview.png" alt="CLIMB overview" style="max-width:100%"></div>
   <div class="content">
     <ul>
@@ -91,7 +127,8 @@
 </div></section>
 
 <section class="section"><div class="container is-max-desktop">
-  <h2 class="title is-3">ROS&nbsp;2/Gazebo replay videos</h2>
+  <p class="kicker">02 &middot; Replay videos</p>
+    <h2 class="title is-3">ROS&nbsp;2/Gazebo replay videos</h2>
   <p>Physics-engine-driven replays of CLIMB-generated trees with 2&ndash;3 TurtleBot3 robots in AWS RoboMaker
   worlds (ROS&nbsp;2 Humble + Nav2; videos sped up &asymp;5&times;). Success is still judged by the symbolic
   goal oracle. Below each video, the exact behavior tree that was executed.</p>
@@ -116,8 +153,9 @@
   </div>
 </div></section>
 
-<section class="section"><div class="container is-max-desktop">
-  <h2 class="title is-3">Dataset</h2>
+<section class="section" band-alt><div class="container is-max-desktop">
+  <p class="kicker">03 &middot; Dataset</p>
+    <h2 class="title is-3">Dataset</h2>
   <div class="content has-text-centered"><img src="static/images/dataset_pipeline.png" alt="benchmark pipeline" style="max-width:100%"></div>
   <div class="content">
     <p>We release a multi-agent mission-to-behavior-tree benchmark: <strong>480 held-out coordination
@@ -129,7 +167,8 @@
 </div></section>
 
 <section class="section hero is-light"><div class="container is-max-desktop">
-  <h2 class="title is-3">Results</h2>
+  <p class="kicker">04 &middot; Results</p>
+    <h2 class="title is-3">Results</h2>
   <div class="content">
     <table class="table is-bordered results" style="margin:auto">
       <thead>
@@ -159,8 +198,9 @@
     highest success at roughly one-fifth to one-tenth of the token cost of the best 5-shot LLM.</p>
   </div></section>
 
-<section class="section"><div class="container is-max-desktop">
-  <h2 class="title is-3">Demo: mission → executable behavior tree</h2>
+<section class="section" band-alt><div class="container is-max-desktop">
+  <p class="kicker">05 &middot; Interactive demo</p>
+    <h2 class="title is-3">Demo: mission → executable behavior tree</h2>
 
   <h3 class="title is-5">1. Three-agent relay with a transient handover fault</h3>
   <div class="mission-box">Sunlight fell across the public library as three robots prepared in whispered motors. Alpha (id alpha) stood at the front desk (front_desk), where the rare manuscript (rare_manuscript) rested under a glass dome. Beta (id beta) hummed at the charging pod (charge_pod), the library’s only charging station, and Gamma (id gamma) waited in the archive room (archive_room). Their mission: carry the manuscript to the archive room, no matter what. Each robot had strict territory. Alpha could only work between the front desk and the reading hall (reading_hall). Beta moved between the reading hall and the charging pod… Execute.</div>
@@ -181,7 +221,7 @@
   warns of debris.</p>
 </div></section>
 
-<footer class="footer"><div class="content has-text-centered is-size-7">
+<footer class="footer site-footer"><div class="content has-text-centered is-size-7">
   Template adapted from academic project-page conventions (e.g., BTGenBot-2). Site content and code released
   under the repository license.
 </div></footer>
