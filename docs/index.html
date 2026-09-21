@@ -185,48 +185,6 @@
   <div class="content has-text-centered">
     <img src="static/images/sample_card.png" alt="Sample record: instruction, input and gold behavior-tree output" style="max-width:92%;border:1px solid var(--line);border-radius:10px">
   </div>
-    &lt;BehaviorTree ID="MainTree"&gt;
-        &lt;Parallel success_threshold="2" failure_threshold="1"&gt;
-            &lt;SubTree ID="Agent_alpha"/&gt;
-            &lt;SubTree ID="Agent_beta"/&gt;
-        &lt;/Parallel&gt;
-    &lt;/BehaviorTree&gt;
-    &lt;BehaviorTree ID="Agent_alpha"&gt;
-        &lt;Sequence&gt;
-            &lt;MoveTo robot="alpha" from="shelf_b" to="shelf_c"/&gt;
-            &lt;Sequence&gt;
-                &lt;IsAtLocation robot="alpha" location="shelf_c"/&gt;
-                &lt;IsItemAt item="crate_blue" location="shelf_c"/&gt;
-                &lt;PickUp robot="alpha" item="crate_blue" location="shelf_c"/&gt;
-            &lt;/Sequence&gt;
-            &lt;MoveTo robot="alpha" from="shelf_c" to="shelf_b"/&gt;
-            &lt;Sequence&gt;
-                &lt;IsAtLocation robot="alpha" location="shelf_b"/&gt;
-                &lt;SignalReady robot="alpha" item="crate_blue" to="beta"/&gt;
-                &lt;Fallback&gt;
-                    &lt;HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/&gt;
-                    &lt;HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/&gt;
-                &lt;/Fallback&gt;
-            &lt;/Sequence&gt;
-        &lt;/Sequence&gt;
-    &lt;/BehaviorTree&gt;
-    &lt;BehaviorTree ID="Agent_beta"&gt;
-        &lt;Sequence&gt;
-            &lt;Sequence&gt;
-                &lt;WaitReady robot="beta" item="crate_blue" from="alpha"/&gt;
-                &lt;Fallback&gt;
-                    &lt;HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/&gt;
-                    &lt;HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/&gt;
-                &lt;/Fallback&gt;
-            &lt;/Sequence&gt;
-            &lt;MoveTo robot="beta" from="shelf_b" to="charge_bay"/&gt;
-            &lt;Sequence&gt;
-                &lt;IsCarrying robot="beta" item="crate_blue"/&gt;
-                &lt;PlaceDown robot="beta" item="crate_blue" location="charge_bay"/&gt;
-            &lt;/Sequence&gt;
-        &lt;/Sequence&gt;
-    &lt;/BehaviorTree&gt;
-&lt;/root&gt;</pre>
   </div>
 </div></section>
 
