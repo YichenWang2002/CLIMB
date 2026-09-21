@@ -16,17 +16,17 @@
          font-family: 'Noto Sans', 'Segoe UI', Helvetica, Arial, sans-serif; }
   a { color: var(--teal); }
 
-  .site-hero { background: linear-gradient(135deg, #122f3a 0%, #17403f 55%, #0d5a4b 100%);
-               color: #fff; padding: 62px 0 54px; }
-  .site-hero .publication-title { color: #fff; font-weight: 700; letter-spacing: .04em; }
-  .site-hero .subtitle { color: #cfe6e0; font-weight: 400; }
-  .site-hero .publication-authors { color: #eaf4f1; }
+  .site-hero { background: var(--paper); color: var(--ink); padding: 56px 0 48px;
+               border-bottom: 1px solid var(--line); }
+  .site-hero .publication-title { color: var(--ink); font-weight: 700; letter-spacing: .04em; }
+  .site-hero .subtitle { color: var(--soft); font-weight: 400; }
+  .site-hero .publication-authors { color: var(--ink); }
   .site-hero .tag-paper { display: inline-block; margin-bottom: 18px; padding: 4px 14px;
-      border: 1px solid #6fd0c0; border-radius: 999px; color: #9adccd;
+      border: 1px solid var(--teal); border-radius: 999px; color: var(--teal);
       font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
-  .site-hero .button { background: transparent; border: 1.5px solid #6fd0c0;
-      color: #eafffa; border-radius: 999px; }
-  .site-hero .button:hover { background: #6fd0c0; color: #12303b; border-color: #6fd0c0; }
+  .site-hero .button { background: #363636; border: none;
+      color: #fff; border-radius: 999px; }
+  .site-hero .button:hover { background: var(--teal); color: #fff; }
   .site-hero .button strong { color: inherit; }
 
   section.section { padding: 54px 0; }
@@ -134,7 +134,7 @@
   goal oracle. Below each video, the exact behavior tree that was executed.</p>
   <div class="columns">
     <div class="column">
-      <img src="static/images/replay_library_bookcase.gif" alt="Joint heavy transport replay, library domain" style="width:100%;border-radius:8px">
+      <img src="static/images/replay_heavy_transport.gif" alt="Joint heavy transport replay" style="width:100%;border-radius:8px">
       <p style="margin-top:.6em"><strong>Joint heavy transport.</strong> Two robots co-carry an oak
       bookcase to the reading hall; the restoration-lab passage may be blocked, forcing a
       <code>ClearPath</code> fallback recovery. <strong>CLIMB completes the mission</strong> while flat SFT and
@@ -143,12 +143,12 @@
         <img src="static/images/bt_case05.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
     </div>
     <div class="column">
-      <img src="static/images/replay_greenhouse_relay.gif" alt="Relay handover transport replay, greenhouse domain" style="width:100%;border-radius:8px">
-      <p style="margin-top:.6em"><strong>Relay handover transport.</strong> A fertilizer bag is
-      relayed across robots to the compost area over a blocked passage. <strong>CLIMB completes the mission</strong>
-      while flat SFT, GPT-5.6-Luna, and DeepSeek-V4-Flash fail.</p>
+      <img src="static/images/replay_relay_handover.gif" alt="Relay handover transport replay" style="width:100%;border-radius:8px">
+      <p style="margin-top:.6em"><strong>Relay handover transport.</strong> Three robots relay a
+      novel stack to the return bin through a fumbling-handover hazard and a blocked corridor.
+      <strong>CLIMB completes the mission</strong> where GPT-5.6-Luna fails the same task.</p>
       <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Executed behavior tree (CLIMB output)</summary>
-        <img src="static/images/bt_case39.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
+        <img src="static/images/bt_case35.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
     </div>
   </div>
 </div></section>
