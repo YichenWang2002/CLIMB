@@ -41,6 +41,10 @@
   .content img { border-radius: 10px; }
   .mission-box { background: #f2f7f6; border-left: 4px solid var(--teal);
                  border-radius: 6px; font-size: .92rem; white-space: pre-wrap; }
+  pre.sample-pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px;
+      padding: 12px 14px; font-size: .74rem; line-height: 1.45; overflow: auto;
+      max-height: 340px; font-family: 'SF Mono', Menlo, Consolas, monospace;
+      white-space: pre; margin: 0; }
   details summary { cursor: pointer; color: var(--teal); }
 
   table.results { border-collapse: collapse; }
@@ -122,32 +126,36 @@
       by construction.</li>
       <li><strong>SPCL curriculum.</strong> Training tasks are staged by difficulty and utility of their
       coordination structure, from single-robot sequences to tightly coupled three-agent missions.</li>
-      <li><strong>SCD decoding.</strong> Spatial constrained decoding masks tokens that would reference
-      locations or edges absent from the platform map, eliminating hallucinated routes.</li>
+      <li><strong>SCD decoding.</strong> Enhances the model's spatial awareness at inference: decoding
+      is grounded in the platform map, so tokens referencing locations or edges absent from it are
+      masked and spatially unreachable behaviors can no longer be generated.</li>
     </ul>
   </div>
 </div></section>
 
 <section class="section"><div class="container is-max-desktop">
-    <h2 class="title is-3">ROS&nbsp;2/Gazebo replay videos</h2>
+    <h2 class="title is-3">ROS&nbsp;2 3D Simulation</h2>
   <p>Physics-engine-driven replays of CLIMB-generated trees with 2&ndash;3 TurtleBot3 robots in AWS RoboMaker
-  worlds (ROS&nbsp;2 Humble + Nav2; videos sped up &asymp;5&times;). Success is still judged by the symbolic
-  goal oracle. Below each video, the exact behavior tree that was executed.</p>
+  <p>Physics-engine-driven runs of CLIMB-generated trees with 2&ndash;3 TurtleBot3 robots in AWS RoboMaker
+  worlds (ROS&nbsp;2 Humble + Nav2; videos sped up &asymp;5&times;). The success flag is returned only after the
+  team completes the whole mission. Below each video, the exact behavior tree that was executed.</p>
   <div class="columns">
     <div class="column">
       <img src="static/images/replay_heavy_transport.gif" alt="Joint heavy transport replay" style="width:100%;border-radius:8px">
       <p style="margin-top:.6em"><strong>Joint heavy transport.</strong> Two robots co-carry an oak
       bookcase to the reading hall; the restoration-lab passage may be blocked, forcing a
-      <code>ClearPath</code> fallback recovery. <strong>CLIMB completes the mission</strong> while flat SFT and
+      <code>ClearPath</code> fallback recovery. <strong>CLIMB completes the mission</strong> while supervised fine-tuning (a BTGenBot-style
+      recipe) and all four 5-shot general-purpose LLM baselines fail.</p>
       all four 5-shot general-purpose LLM baselines fail.</p>
       <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Behavior tree (CLIMB output)</summary>
         <img src="static/images/bt_case05.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
     </div>
     <div class="column">
       <img src="static/images/replay_relay_handover.gif" alt="Relay handover transport replay" style="width:100%;border-radius:8px">
-      <p style="margin-top:.6em"><strong>Relay handover transport.</strong> A fertilizer bag is relayed
-      across three robots to the compost area over a blocked passage, with a fumbling-handover hazard
-      on the way. <strong>CLIMB completes the mission</strong> while flat SFT, GPT-5.6-Luna, and
+      <p style="margin-top:.6em"><strong>Relay handover transport.</strong> A medicine package is relayed across three robots &mdash;
+      each restricted to its own operating area &mdash; to its destination, with a fumbling-handover
+      hazard on the way. <strong>CLIMB completes the mission</strong> while supervised fine-tuning,
+      GPT-5.6-Luna, and DeepSeek-V4-Flash fail.</p>
       DeepSeek-V4-Flash fail.</p>
       <details style="margin-top:.4em"><summary style="cursor:pointer;color:#3273dc">Behavior tree (CLIMB output)</summary>
         <img src="static/images/bt_case39.png" style="width:100%;margin-top:.5em;border:1px solid #e8e8e8;border-radius:8px"></details>
@@ -156,15 +164,89 @@
 </div></section>
 
 <section class="section" band-alt><div class="container is-max-desktop">
-    <h2 class="title is-3">Dataset</h2>
-  <div class="content has-text-centered"><img src="static/images/dataset_pipeline.png" alt="benchmark pipeline" style="max-width:100%"></div>
+     <h2 class="title is-3">Dataset</h2>
   <div class="content">
-    <p>We release a multi-agent mission-to-behavior-tree benchmark: <strong>480 held-out coordination
-    tasks</strong> from two domains unseen during training (library, greenhouse). Each instance pairs a natural-language mission — including a spoken platform map — with a
-    gold executable BehaviorTree.CPP&nbsp;v4 XML, and is scored by a shared symbolic executor under runtime
-    faults (blocked edges, battery budgets, transient handover failures). Success requires the MainTree to
-    return SUCCESS <em>and</em> the goal facts to hold after execution.</p>
+    <p>Every pair is generated by a planning pipeline rather than mined or hand-written. A
+    <strong>scenario sampler</strong> first draws a task &mdash; facts, goals, connectivity and faults
+    &mdash; from a STRIPS domain; a <strong>grounded forward planner</strong> computes a valid action
+    plan; a <strong>deterministic compiler</strong> turns the plan into an executable
+    BehaviorTree.CPP&nbsp;v4 XML; and an <strong>executor replay gate</strong> re-runs the tree under
+    the injected faults &mdash; candidates that fail are rejected and the task resampled. Only verified
+    plans survive, and an LLM paraphrases their symbol facts into a fluent natural-language mission,
+    yielding pairs whose targets are correct by construction.</p>
+    <p>The released dataset contains <strong>6,000 training</strong> and <strong>600 validation</strong>
+    missions from four seen domains (warehouse, hospital, search&amp;rescue, office) and a
+    <strong>480-task held-out test set</strong> from two unseen domains (library, greenhouse):
+    320 relay-transport and 160 joint-heavy-transport missions, 357 of them with recoverable faults.
+    Each instance pairs a natural-language mission with a gold executable XML, and success requires
+    the shared symbolic executor to tick the tree to <em>SUCCESS</em> while every goal fact holds.</p>
   </div>
+
+  <h3 class="title is-5" style="margin-top:2em">Sample record</h3>
+  <p>One training instance. The <em>instruction</em> is a fixed system prompt shared by the whole
+  dataset; the <em>input</em> is the natural-language mission given to the model; the <em>output</em>
+  is the gold, executor-validated behavior tree the model must emit.</p>
+  <p style="margin-bottom:.4em"><strong>Instruction</strong> <span style="color:var(--soft)">(shared system prompt)</span></p>
+  <div class="mission-box" style="font-size:.85rem">You are a helpful assistant that creates behavior trees for multi-robot teams.
+Your task:
+- Convert the provided natural-language mission description into an XML-formatted multi-agent behavior tree.
+- The behavior tree must be compatible with the BehaviorTree.CPP library (&lt;root BTCPP_format=&quot;4&quot;&gt;), with one &lt;BehaviorTree&gt; per robot coordinated by a main tree.
+- Use Fallback nodes to recover from the failures mentioned in the mission.
+- Use SignalReady/WaitReady and the Handover/Co* joint nodes for inter-robot coordination.
+
+Output Requirements:
+- Output only the XML representation of the behavior tree. Do not include explanations, comments, or any additional text.
+- Every robot mentioned in the mission must have its own &lt;BehaviorTree ID=&quot;Agent_&lt;name&gt;&quot;&gt;.</div>
+  <p style="margin:1em 0 .4em"><strong>Input</strong> <span style="color:var(--soft)">(natural-language mission)</span></p>
+  <div class="mission-box" style="font-size:.85rem">Alpha (id alpha) and Beta (id beta) are a two-robot team stationed at shelf B (shelf_b). Their task: retrieve the blue crate (crate_blue) from shelf C (shelf_c) and deliver it to the charging bay (charge_bay). Alpha is cleared to work only on shelf C and shelf B; Beta is cleared to work only on shelf B and the charging bay. The handover of the blue crate between them may fumble on the first attempt, so they should be ready to try again.
+
+The warehouse layout connects the charging bay to shelf B, shelf B to shelf A (shelf_a) and shelf C, shelf A to the loading dock (loading_dock) and the packing station (packing_station), and the loading dock and packing station to each other. The charging bay is the only charging station.</div>
+  <p style="margin:1em 0 .4em"><strong>Output</strong> <span style="color:var(--soft)">(gold behavior tree, XML)</span></p>
+  <pre class="sample-pre">&lt;?xml version="1.0" ?&gt;
+&lt;root BTCPP_format="4" main_tree_to_execute="MainTree"&gt;
+    &lt;BehaviorTree ID="MainTree"&gt;
+        &lt;Parallel success_threshold="2" failure_threshold="1"&gt;
+            &lt;SubTree ID="Agent_alpha"/&gt;
+            &lt;SubTree ID="Agent_beta"/&gt;
+        &lt;/Parallel&gt;
+    &lt;/BehaviorTree&gt;
+    &lt;BehaviorTree ID="Agent_alpha"&gt;
+        &lt;Sequence&gt;
+            &lt;MoveTo robot="alpha" from="shelf_b" to="shelf_c"/&gt;
+            &lt;Sequence&gt;
+                &lt;IsAtLocation robot="alpha" location="shelf_c"/&gt;
+                &lt;IsItemAt item="crate_blue" location="shelf_c"/&gt;
+                &lt;PickUp robot="alpha" item="crate_blue" location="shelf_c"/&gt;
+            &lt;/Sequence&gt;
+            &lt;MoveTo robot="alpha" from="shelf_c" to="shelf_b"/&gt;
+            &lt;Sequence&gt;
+                &lt;IsAtLocation robot="alpha" location="shelf_b"/&gt;
+                &lt;SignalReady robot="alpha" item="crate_blue" to="beta"/&gt;
+                &lt;Fallback&gt;
+                    &lt;HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/&gt;
+                    &lt;HandoverGive giver="alpha" receiver="beta" item="crate_blue" location="shelf_b"/&gt;
+                &lt;/Fallback&gt;
+            &lt;/Sequence&gt;
+        &lt;/Sequence&gt;
+    &lt;/BehaviorTree&gt;
+    &lt;BehaviorTree ID="Agent_beta"&gt;
+        &lt;Sequence&gt;
+            &lt;Sequence&gt;
+                &lt;WaitReady robot="beta" item="crate_blue" from="alpha"/&gt;
+                &lt;Fallback&gt;
+                    &lt;HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/&gt;
+                    &lt;HandoverTake receiver="beta" giver="alpha" item="crate_blue" location="shelf_b"/&gt;
+                &lt;/Fallback&gt;
+            &lt;/Sequence&gt;
+            &lt;MoveTo robot="beta" from="shelf_b" to="charge_bay"/&gt;
+            &lt;Sequence&gt;
+                &lt;IsCarrying robot="beta" item="crate_blue"/&gt;
+                &lt;PlaceDown robot="beta" item="crate_blue" location="charge_bay"/&gt;
+            &lt;/Sequence&gt;
+        &lt;/Sequence&gt;
+    &lt;/BehaviorTree&gt;
+&lt;/root&gt;
+</pre>
 </div></section>
 
 <section class="section hero is-light"><div class="container is-max-desktop">
@@ -211,7 +293,7 @@
     full model on the 480-task suite.</p>
   </div>
   <div class="content has-text-centered" style="margin-top:1.6em">
-    <img src="static/images/pareto_v2.png?v=2" alt="Success rate vs. token cost" style="max-width:100%">
+    <img src="static/images/pareto_v2.png" alt="Success rate vs. token cost" style="max-width:100%">
     <p class="is-size-7">Execution success vs. token cost. CLIMB sits in the upper-left corner:
     highest success at roughly one-fifth to one-tenth of the token cost of the best 5-shot LLM.</p>
   </div></section>
@@ -239,7 +321,7 @@
 </div></section>
 
 <footer class="footer site-footer"><div class="content has-text-centered is-size-7">
-  Template adapted from academic project-page conventions (e.g., BTGenBot-2). Site content and code released
+  Template adapted from academic project-page conventions. Site content and code released
   under the repository license.
 </div></footer>
 
