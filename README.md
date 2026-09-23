@@ -66,9 +66,9 @@ CLIMB/
 ## Usage
 
 This repository is a **reference framework**: the complete pipeline is
-included, but exact hyperparameters (curriculum schedule, learning rate, LoRA
-configuration) are withheld at the current stage — the entry scripts mark
-every place where you need to plug in your own values.
+included, and every configuration value is documented in
+[**Fixed configuration**](#fixed-configuration) below — the entry scripts ask
+you to pass them explicitly rather than silently defaulting.
 
 ```bash
 pip install -r requirements.txt
@@ -88,6 +88,26 @@ bash scripts/run_scd.sh   outputs/checkpoints/spcl_s42/stage3 spcl_s42_scd
 Backbones are pulled from the Hugging Face Hub, or pointed at local snapshots
 via `CLIMB_BASE_MODEL` / `CLIMB_ENCODER`. Everything runs on a single 24 GB
 GPU.
+
+## Fixed configuration
+
+All prompts, decoding settings, and training/curriculum hyperparameters are
+**fixed across baselines** and released with the code, as stated in the paper.
+
+| Component | Value |
+|---|---|
+| System prompt (instruction) | the `instruction` field of every record in `data/*.jsonl` |
+| NL paraphrase prompt (corpus) | `datagen/nl_gen.py` (`build_prompt`) |
+| Decoding | greedy (`do_sample=False`), `max_new_tokens` 1400, eval batch 64, left padding |
+| LoRA | r 16, α 32, dropout 0.05 on q/k/v/o/gate/up/down projections |
+| Optimizer | paged AdamW, lr 1e-4, linear decay, 10% warm-up |
+| Batch / length | effective batch 16 (4 × 4), max length 2560 |
+| Epochs | flat: 3 · SPCL: three 1-epoch stages (optimizer/LR reset per stage, LoRA adapter carried over) |
+| SPCL curriculum | K = 4 buckets, R = 3 stages, expanding windows (2, 3, 4), dose table `1,1 \| 1,1,1.5 \| 0.5,0.75,1.5,3`, draws ∝ U<sub>i</sub>·m<sub>s,b<sub>i</sub></sub> |
+
+The run scripts require these values to be passed explicitly
+(`CLIMB_LR`, `CLIMB_LORA_R`, `CLIMB_LORA_ALPHA`, `CLIMB_WINDOW`,
+`CLIMB_DOSE`) — nothing is silently defaulted.
 
 ## Dataset
 
