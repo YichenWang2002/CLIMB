@@ -1,7 +1,7 @@
 # CLIMB: Curriculum Learning for Multi-Agent Behavior Tree Generation with Small Language Models (ICASSP 2027 under review)
 
 <div align="center">
-  <img src="docs/static/images/overview.png" alt="CLIMB overview" width="100%">
+  <img src="docs/static/images/overview_v2.png" alt="CLIMB overview" width="100%">
 </div>
 
 **🌍 Project page:** [yichenwang2002.github.io/CLIMB](https://yichenwang2002.github.io/CLIMB/)
